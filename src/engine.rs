@@ -16,9 +16,9 @@ pub fn print(expr: &str) -> Result<(), DynError> {
     Ok(())
 }
 
-pub fn build_query(expr: &str) -> Result<String, DynError> {
+pub fn build_query(expr: &str) -> Result<(String, bool), DynError> {
     let query = parser::parse(expr)?;
     let generated_code = query.generate();
 
-    Ok(generated_code)
+    Ok((generated_code, query.open_browser))
 }

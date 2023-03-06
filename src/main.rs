@@ -20,10 +20,10 @@ fn main() -> Result<(), DynError> {
             break;
         }
 
-        let query = engine::build_query(&expr)?;
+        let (query, open_browser) = engine::build_query(&expr)?;
 
         let rt = Runtime::new().unwrap();
-        rt.block_on(salesforce::run(&query)).unwrap();
+        rt.block_on(salesforce::run(&query, open_browser)).unwrap();
     }
 
     Ok(())
