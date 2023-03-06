@@ -42,6 +42,7 @@ pub enum MethodCondition {
     Where,
     Order,
     Limit,
+    Open,
 }
 
 pub fn parse(expr: &str) -> Result<Query, ParseError> {
@@ -63,6 +64,7 @@ pub fn parse(expr: &str) -> Result<Query, ParseError> {
             "where" => MethodCondition::Where,
             "orderby" => MethodCondition::Order,
             "limit" => MethodCondition::Limit,
+            "open" => MethodCondition::Open,
             _ => return Err(ParseError::InvalidOption),
         };
 
@@ -78,6 +80,9 @@ pub fn parse(expr: &str) -> Result<Query, ParseError> {
             }
             MethodCondition::Limit => {
                 query.limit = Some(parse_limit(condition)?);
+            }
+            MethodCondition::Open => {
+                query.open_browser = true;
             }
             _ => (),
         };
