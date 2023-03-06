@@ -6,15 +6,23 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
-    name: cargo test
+  check:
+    name: Rust project
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup Rust
-      uses: actions/setup-rust@v1
-      with:
-        rust-version: 1.56.0
-    - name: Build and Test
-      run: cargo test
+      - uses: actions/checkout@v2
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            components: rustfmt, clippy
+
+      # `cargo check` command here will use installed `nightly`
+      # as it is set as an "override" for current directory
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
 
