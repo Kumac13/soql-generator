@@ -93,7 +93,7 @@ pub fn parse(expr: &str) -> Result<Query, ParseError> {
 //pub fn parse(expr: &str) -> Result<QueryMethod, ParseError> {}
 
 fn split_method_condition(part: &str) -> (&str, &str) {
-    let parts: Vec<&str> = part.split("(").collect();
+    let parts: Vec<&str> = part.split('(').collect();
     let method = parts[0];
     let condition = parts[1].trim_end_matches(')');
 
@@ -105,7 +105,7 @@ fn parse_select(condition: &str) -> String {
 }
 
 fn parse_where(condition: &str) -> String {
-    format!("{}", condition)
+    condition.to_string()
 }
 
 fn parse_limit(condition: &str) -> Result<String, ParseError> {
