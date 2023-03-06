@@ -3,7 +3,9 @@ mod helper;
 mod salesforce;
 
 use helper::DynError;
+use std::env;
 use std::io::{self, Write};
+use tokio::runtime::Runtime;
 
 fn main() -> Result<(), DynError> {
     println!("Welcome to SOQL Generator");
@@ -18,7 +20,10 @@ fn main() -> Result<(), DynError> {
             break;
         }
 
-        engine::print(&expr)?;
+        let query = engine::build_query(&expr)?;
+
+        let rt = Runtime::new().unwrap();
+        rt.block_on(salesforce::run(&query)).unwrap();
     }
 
     Ok(())
