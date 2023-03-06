@@ -90,6 +90,17 @@ async fn call_query(
     Ok(response)
 }
 
+fn open_record(login_response: &LoginResponse, query_response: &Value) {
+    if let Some(record) = query_response["records"].as_array().and_then(|r| r.get(0)) {
+        let id = record["Id"].as_str().unwrap_or("");
+        let instance_url = &login_response.instance_url;
+        let url = format!("{}{}", instance_url, "/".to_owned() + id);
+        if let Err(e) = webbrowser::open(&url) {
+            println!("Failed to open URL: {}", e);
+        }
+    }
+}
+
 pub async fn run(query: &str, open_browswer: bool) -> Result<(), Box<dyn Error>> {
     let client_id = env::var("SFDC_CLIENT_ID")?;
     let client_secret = env::var("SFDC_CLIENT_SECRET")?;
@@ -104,14 +115,7 @@ pub async fn run(query: &str, open_browswer: bool) -> Result<(), Box<dyn Error>>
     .await?;
 
     if open_browswer {
-        if let Some(record) = query_response["records"].as_array().and_then(|r| r.get(0)) {
-            let id = record["Id"].as_str().unwrap_or("");
-            let instance_url = &login_response.instance_url;
-            let url = format!("{}{}", instance_url, "/".to_owned() + id);
-            if let Err(e) = webbrowser::open(&url) {
-                println!("Failed to open URL: {}", e);
-            }
-        }
+        open_record(&login_response, &query_response);
     }
 
     println!("{}", serde_json::to_string_pretty(&query_response)?);
