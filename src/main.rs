@@ -3,12 +3,12 @@ mod helper;
 mod salesforce;
 
 use helper::DynError;
-use std::env;
 use std::io::{self, Write};
 use tokio::runtime::Runtime;
 
 fn main() -> Result<(), DynError> {
     println!("Welcome to SOQL Generator");
+    println!("Type 'exit' to quit");
     loop {
         print!("SOQLGenerator >>> ");
         io::stdout().flush().unwrap();

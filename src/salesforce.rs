@@ -6,8 +6,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::error::Error;
-use tokio::runtime::Runtime;
-use webbrowser::open;
 
 const LOGIN_URL: &str = "https://login.salesforce.com/services/oauth2/token";
 
