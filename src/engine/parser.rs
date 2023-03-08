@@ -140,6 +140,24 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_where_clause() {
+        // Case1: simple pattern
+        let query_str = "Account.where(name = 'test')";
+        let result = parse(query_str).unwrap();
+
+        assert_eq!(result.where_clause.unwrap(), "name = 'test'");
+
+        // Casel2: complecated pattern
+        let query_str = "Account.where(name = 'test' and (id = 10 or id = 20))";
+        let result = parse(query_str).unwrap();
+
+        assert_eq!(
+            result.where_clause.unwrap(),
+            "name = 'test' and (id = 10 or id = 20)"
+        );
+    }
+
+    #[test]
     fn test_parse_invalid_sobject() {
         let query_str = "select(Id, Name)";
         let result = parse(query_str);
