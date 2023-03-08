@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::error::Error;
+use urlencoding::encode;
 
 const LOGIN_URL: &str = "https://login.salesforce.com/services/oauth2/token";
 
@@ -67,12 +68,13 @@ async fn call_query(
 ) -> Result<Value, Box<dyn Error>> {
     let client = Client::new();
     let mut headers = HeaderMap::new();
+    let encoded_query = encode(query);
     headers.insert(
         AUTHORIZATION,
         format!("Bearer {}", access_token).parse().unwrap(),
     );
     let request = QueryRequest {
-        q: query.to_string(),
+        q: encoded_query.to_string(),
     };
     let url = format!(
         "{}/services/data/v51.0/query/?q={}",
