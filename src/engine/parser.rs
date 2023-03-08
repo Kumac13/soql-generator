@@ -97,12 +97,39 @@ pub fn parse(expr: &str) -> Result<Query, ParseError> {
 
 //pub fn parse(expr: &str) -> Result<QueryMethod, ParseError> {}
 
+/*
 fn split_method_condition(part: &str) -> (&str, &str) {
     let parts: Vec<&str> = part.split('(').collect();
+
+    println!("{:?}", parts);
+
     let method = parts[0];
     let condition = parts[1].trim_end_matches(')');
 
     (method, condition)
+}
+*/
+fn split_method_condition(part: &str) -> (&str, &str) {
+    let mut method = "";
+    let mut condition = "";
+    let mut depth = 0;
+
+    for (i, c) in part.char_indices() {
+        if c == '(' {
+            depth += 1;
+            if depth == 1 {
+                method = &part[..i];
+            }
+        } else if c == ')' {
+            depth -= 1;
+            if depth == 0 {
+                condition = &part[(method.len() + 1)..i];
+                break;
+            }
+        }
+    }
+
+    (method.trim(), condition.trim())
 }
 
 fn parse_select(condition: &str) -> String {
@@ -130,22 +157,23 @@ mod tests {
     #[test]
     fn test_parse() {
         let query_str =
-            "Opportunity.select(name).where(amount > 1000).orderby(created_date).limit(10)";
+            "Opportunity.select(name).where(name like 'test').orderby(created_date).limit(10).open()";
         let query = parse(query_str).unwrap();
         assert_eq!(query.from, "Opportunity");
         assert_eq!(query.select.unwrap(), "name");
-        assert_eq!(query.where_clause.unwrap(), "amount > 1000");
+        assert_eq!(query.where_clause.unwrap(), "name like 'test'");
         assert_eq!(query.orderby.unwrap(), "created_date");
         assert_eq!(query.limit.unwrap(), "10");
+        assert_eq!(query.open_browser, true);
     }
 
     #[test]
     fn test_parse_where_clause() {
         // Case1: simple pattern
-        let query_str = "Account.where(name = 'test')";
+        let query_str = "Account.where(name like '%test%')";
         let result = parse(query_str).unwrap();
 
-        assert_eq!(result.where_clause.unwrap(), "name = 'test'");
+        assert_eq!(result.where_clause.unwrap(), "name like '%test%'");
 
         // Casel2: complecated pattern
         let query_str = "Account.where(name = 'test' and (id = 10 or id = 20))";
