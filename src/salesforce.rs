@@ -8,6 +8,8 @@ use std::env;
 use std::result::Result;
 use urlencoding::encode;
 
+use crate::helper::DynError;
+
 const LOGIN_URL: &str = "https://login.salesforce.com/services/oauth2/token";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -30,7 +32,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn new() -> Result<Self, DynError> {
         let client_id = env::var("SFDC_CLIENT_ID")?;
         let client_secret = env::var("SFDC_CLIENT_SECRET")?;
         let username = env::var("SFDC_USERNAME")?;
@@ -64,11 +66,7 @@ impl Connection {
         })
     }
 
-    pub async fn call_query(
-        &self,
-        query: &str,
-        open_browser: bool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn call_query(&self, query: &str, open_browser: bool) -> Result<(), DynError> {
         let client = Client::new();
         let mut headers = HeaderMap::new();
         let encoded_query = encode(query);
