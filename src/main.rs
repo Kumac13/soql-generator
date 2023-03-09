@@ -7,12 +7,20 @@ use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use tokio::runtime::Runtime;
 
+use crate::salesforce::Connection;
+
 fn main() -> Result<(), DynError> {
     let mut rl = DefaultEditor::new()?;
     #[cfg(feature = "with-file-history")]
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
+
+    let rt = Runtime::new().unwrap();
+    let conn = rt.block_on(async {
+        let conn = Connection::new().await?;
+        Ok::<Connection, Box<dyn std::error::Error + Send + Sync>>(conn)
+    })?;
 
     println!("Welcome to SOQL Generator");
     println!("Type 'exit' to quit");
@@ -34,8 +42,7 @@ fn main() -> Result<(), DynError> {
                     }
                 };
 
-                let rt = Runtime::new().unwrap();
-                rt.block_on(salesforce::run(&query, open_browser)).unwrap();
+                rt.block_on(conn.call_query(&query, open_browser)).unwrap();
             }
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
