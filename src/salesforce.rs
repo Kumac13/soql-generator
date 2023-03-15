@@ -1,7 +1,7 @@
 use actix_web::{web, App, HttpResponse, HttpServer};
 use percent_encoding::percent_decode_str;
 use reqwest::{
-    header::{HeaderMap, AUTHORIZATION, CONTENT_TYPE},
+    header::{HeaderMap, AUTHORIZATION},
     Client,
 };
 use serde::{Deserialize, Serialize};
@@ -9,9 +9,7 @@ use serde_json::Value;
 use std::env;
 use std::fs;
 use std::path::Path;
-use url::Url as StdUrl;
 use urlencoding::encode;
-use webbrowser;
 
 use crate::helper::DynError;
 
@@ -107,7 +105,7 @@ async fn auth_callback(req: actix_web::HttpRequest) -> HttpResponse {
 
     let token_response = fetch_access_token(&code).await.unwrap();
 
-    fs::write("refresh_token.txt", &token_response.refresh_token.unwrap())
+    fs::write("refresh_token.txt", token_response.refresh_token.unwrap())
         .expect("Unable to write refresh token to file");
 
     HttpResponse::Ok().body("You can close this window now.")
@@ -136,9 +134,7 @@ impl Connection {
                 refresh_token: None,
             };
 
-            return Ok(Self {
-                token_response: token_response,
-            });
+            return Ok(Self { token_response });
         }
 
         // If the refresh token does not exist, prompt the user to authenticate
@@ -159,9 +155,7 @@ impl Connection {
             refresh_token: None,
         };
 
-        Ok(Self {
-            token_response: token_response,
-        })
+        Ok(Self { token_response })
     }
 
     pub async fn call_query(&self, query: &str, open_browser: bool) -> Result<(), DynError> {
