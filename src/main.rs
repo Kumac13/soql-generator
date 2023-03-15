@@ -23,7 +23,7 @@ async fn main() -> Result<(), DynError> {
 
     if let Some(query) = args.query {
         let conn = Connection::new().await?;
-        let (parsed_query, open_browser) = engine::build_query(&query)?;
+        let (parsed_query, _open_browser) = engine::build_query(&query)?;
         conn.call_query(&parsed_query, false).await?;
     } else {
         run().await?;
