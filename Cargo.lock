@@ -1557,6 +1557,7 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "clap",
+ "parking_lot",
  "percent-encoding",
  "reqwest",
  "rustyline",

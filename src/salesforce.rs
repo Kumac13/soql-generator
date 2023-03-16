@@ -1,4 +1,5 @@
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{dev::ServerHandle, get, middleware, web, App, HttpServer};
+use parking_lot::Mutex;
 use percent_encoding::percent_decode_str;
 use reqwest::{
     header::{HeaderMap, AUTHORIZATION},
@@ -6,9 +7,8 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::env;
-use std::fs;
 use std::path::Path;
+use std::{env, fs};
 use urlencoding::encode;
 
 use crate::helper::DynError;
@@ -16,10 +16,22 @@ use crate::helper::DynError;
 const LOGIN_URL: &str = "https://login.salesforce.com/services/oauth2/token";
 const REDIRECT_URI: &str = "http://localhost:8000/oauth/callback";
 
-fn get_client_id_and_secret() -> (String, String) {
-    let client_id = env::var("SFDC_CLIENT_ID").unwrap();
-    let client_secret = env::var("SFDC_CLIENT_SECRET").unwrap();
-    (client_id, client_secret)
+#[derive(Debug, Deserialize, Serialize)]
+struct TokenResponse {
+    access_token: String,
+    refresh_token: Option<String>,
+    instance_url: String,
+}
+
+fn open_record(token_response: &TokenResponse, query_response: &Value) {
+    if let Some(record) = query_response["records"].as_array().and_then(|r| r.get(0)) {
+        let id = record["Id"].as_str().unwrap_or("");
+        let instance_url = &token_response.instance_url;
+        let url = format!("{}{}", instance_url, "/".to_owned() + id);
+        if let Err(e) = webbrowser::open(&url) {
+            println!("Failed to open URL: {}", e);
+        }
+    }
 }
 
 fn get_authorization_url() -> String {
@@ -32,13 +44,6 @@ fn get_authorization_url() -> String {
         REDIRECT_URI,
         scope
     )
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct TokenResponse {
-    access_token: String,
-    refresh_token: Option<String>,
-    instance_url: String,
 }
 
 async fn fetch_access_token_with_refresh_token(
@@ -95,7 +100,17 @@ async fn fetch_access_token(code: &str) -> Result<TokenResponse, DynError> {
     })
 }
 
-async fn auth_callback(req: actix_web::HttpRequest) -> HttpResponse {
+fn get_client_id_and_secret() -> (String, String) {
+    let client_id = env::var("SFDC_CLIENT_ID").unwrap();
+    let client_secret = env::var("SFDC_CLIENT_SECRET").unwrap();
+    (client_id, client_secret)
+}
+
+#[get("/oauth/callback")]
+async fn oauth_callback(
+    req: actix_web::HttpRequest,
+    stop_handle: web::Data<StopHandle>,
+) -> &'static str {
     let query_string = req.query_string();
     let decoded_query_string = percent_decode_str(query_string).decode_utf8_lossy();
     let code = decoded_query_string
@@ -108,7 +123,9 @@ async fn auth_callback(req: actix_web::HttpRequest) -> HttpResponse {
     fs::write("refresh_token.txt", token_response.refresh_token.unwrap())
         .expect("Unable to write refresh token to file");
 
-    HttpResponse::Ok().body("You can close this window now.")
+    stop_handle.stop(true);
+
+    "You can close this window now."
 }
 
 async fn get_access_token_from_refresh_token() -> Result<TokenResponse, DynError> {
@@ -118,43 +135,57 @@ async fn get_access_token_from_refresh_token() -> Result<TokenResponse, DynError
     Ok(token_response)
 }
 
+#[derive(Debug)]
 pub struct Connection {
     token_response: TokenResponse,
 }
 
 impl Connection {
     pub async fn new() -> Result<Self, DynError> {
-        // Use the refresh token if it exists
-        if Path::new("refresh_token.txt").exists() {
-            let token_response = get_access_token_from_refresh_token().await?;
+        let response = if Path::new("refresh_token.txt").exists() {
+            get_access_token_from_refresh_token().await?
+        } else {
+            // If the refresh token does not exist, prompt the user to authenticate
+            let auth_url = get_authorization_url();
 
-            let token_response = TokenResponse {
-                access_token: token_response.access_token,
-                instance_url: token_response.instance_url,
-                refresh_token: None,
-            };
+            webbrowser::open(&auth_url)?;
 
-            return Ok(Self { token_response });
-        }
+            println!("Waiting for Authorization...");
 
-        // If the refresh token does not exist, prompt the user to authenticate
-        let auth_url = get_authorization_url();
+            // create the stop handle container
+            let stop_handle = web::Data::new(StopHandle::default());
 
-        webbrowser::open(&auth_url)?;
+            // start server as normal but don't .await after .run() yet
+            let srv = HttpServer::new({
+                let stop_handle = stop_handle.clone();
 
-        HttpServer::new(|| App::new().route("/oauth/callback", web::get().to(auth_callback)))
-            .bind("localhost:8000")?
-            .run()
-            .await?;
+                move || {
+                    // give the server a Sender in .data
+                    App::new()
+                        .app_data(stop_handle.clone())
+                        .service(oauth_callback)
+                        .wrap(middleware::Logger::default())
+                }
+            })
+            .bind(("127.0.0.1", 8000))?
+            .workers(2)
+            .run();
 
-        let token_response = get_access_token_from_refresh_token().await?;
+            // register the server handle with the stop handle
+            stop_handle.register(srv.handle());
 
+            // run server until stopped (either by ctrl-c or stop endpoint)
+            srv.await?;
+
+            println!("Successfully authorized");
+
+            get_access_token_from_refresh_token().await?
+        };
         let token_response = TokenResponse {
-            access_token: token_response.access_token,
-            instance_url: token_response.instance_url,
+            access_token: response.access_token,
+            instance_url: response.instance_url,
             refresh_token: None,
         };
-
         Ok(Self { token_response })
     }
 
@@ -188,13 +219,20 @@ impl Connection {
     }
 }
 
-fn open_record(token_response: &TokenResponse, query_response: &Value) {
-    if let Some(record) = query_response["records"].as_array().and_then(|r| r.get(0)) {
-        let id = record["Id"].as_str().unwrap_or("");
-        let instance_url = &token_response.instance_url;
-        let url = format!("{}{}", instance_url, "/".to_owned() + id);
-        if let Err(e) = webbrowser::open(&url) {
-            println!("Failed to open URL: {}", e);
-        }
+#[derive(Default)]
+struct StopHandle {
+    inner: Mutex<Option<ServerHandle>>,
+}
+
+impl StopHandle {
+    /// Sets the server handle to stop.
+    pub(crate) fn register(&self, handle: ServerHandle) {
+        *self.inner.lock() = Some(handle);
+    }
+
+    /// Sends stop signal through contained server handle.
+    pub(crate) fn stop(&self, graceful: bool) {
+        #[allow(clippy::let_underscore_future)]
+        let _ = self.inner.lock().as_ref().unwrap().stop(graceful);
     }
 }

@@ -17,7 +17,7 @@ struct Args {
     query: Option<String>,
 }
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> Result<(), DynError> {
     let args = Args::parse();
 
