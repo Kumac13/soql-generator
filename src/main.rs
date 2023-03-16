@@ -34,7 +34,6 @@ async fn main() -> Result<(), DynError> {
 
 async fn run() -> Result<(), DynError> {
     let mut rl = DefaultEditor::new()?;
-    #[cfg(feature = "with-file-history")]
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
@@ -78,7 +77,6 @@ async fn run() -> Result<(), DynError> {
         }
     }
 
-    #[cfg(feature = "with-file-history")]
     if let Err(e) = rl.save_history("history.txt") {
         eprintln!("Failed to save history: {}", e);
     }
