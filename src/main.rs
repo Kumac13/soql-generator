@@ -1,12 +1,16 @@
 mod engine;
 mod helper;
+mod hint;
 mod salesforce;
 
+use crate::hint::query_hints;
 use crate::salesforce::Connection;
 use clap::Parser;
 use helper::DynError;
+use hint::QueryHinter;
 use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
+use rustyline::history::DefaultHistory;
+use rustyline::Editor;
 
 /// Tool for interactively executing SOQL queries
 #[derive(Parser, Debug)]
@@ -33,7 +37,12 @@ async fn main() -> Result<(), DynError> {
 }
 
 async fn run() -> Result<(), DynError> {
-    let mut rl = DefaultEditor::new()?;
+    let hinter = QueryHinter {
+        hints: query_hints().unwrap(),
+    };
+    let mut rl: Editor<QueryHinter, DefaultHistory> = Editor::new()?;
+    rl.set_helper(Some(hinter));
+
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
