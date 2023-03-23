@@ -23,6 +23,23 @@ pub struct QueryHinter<'a> {
     pub hints: RefCell<HashSet<QueryHint>>,
 }
 
+impl<'a> QueryHinter<'a> {
+    fn update_hints(&self, line: &str) {
+        let dot_boundary = line.rfind('.').unwrap_or(0);
+        let object_name = line.trim();
+        let objects = self.connection.get_cached_objects();
+        let is_matching_object =
+            object_name.is_empty() || objects.contains(&object_name.to_string());
+
+        let mut hints = self.hints.borrow_mut();
+        if is_matching_object {
+            *hints = objects.into_iter().map(|s| QueryHint::new(&s)).collect();
+        } else if dot_boundary > 0 {
+            *hints = query_hints().unwrap();
+        }
+    }
+}
+
 #[derive(Hash, Debug, PartialEq, Eq)]
 pub struct QueryHint {
     display: String,
@@ -68,37 +85,16 @@ impl Hinter for QueryHinter<'_> {
             return None;
         }
 
-        let dot_boundary = line.rfind('.').unwrap_or(0);
-        let bracket_comma_boundary = line
-            .rfind(|c: char| c == '(' || c == ',')
-            .map(|idx| idx + 1)
-            .unwrap_or(0);
+        self.update_hints(line);
+
         let last_word_boundary = line
             .rfind(|c: char| c.is_whitespace() || c == '.' || c == '(' || c == ',')
             .map(|idx| idx + 1)
             .unwrap_or(0);
         let line_suffix = &line[last_word_boundary..];
 
-        let object_name = line.trim();
-        let objects = self.connection.get_cached_objects();
-        let is_matching_object =
-            object_name.is_empty() || objects.contains(&object_name.to_string());
-
-        if is_matching_object {
-            let mut hints = self.hints.borrow_mut();
-            *hints = objects.into_iter().map(|s| QueryHint::new(&s)).collect();
-        }
-        /*else if bracket_comma_boundary > dot_boundary {
-            let objects = line.split('.');
-            println!("{:?}", objects);
-        }
-        else {
-            let mut hints = self.hints.borrow_mut();
-            *hints = query_hints().unwrap();
-        }
-        */
-
         let hints = self.hints.borrow();
+
         hints
             .iter()
             .filter_map(|hint| {
@@ -134,31 +130,13 @@ impl<'a> Completer for QueryHinter<'a> {
         _pos: usize,
         _ctx: &rustyline::Context<'_>,
     ) -> Result<(usize, Vec<Pair>)> {
+        self.update_hints(line);
+
         let last_word_boundary = line
             .rfind(|c: char| c.is_whitespace() || c == '.' || c == '(' || c == ',')
             .map(|idx| idx + 1)
             .unwrap_or(0);
         let line_suffix = &line[last_word_boundary..];
-
-        let object_name = line.trim();
-        let objects = self.connection.get_cached_objects();
-        let is_matching_object =
-            object_name.is_empty() || objects.contains(&object_name.to_string());
-
-        if is_matching_object {
-            let mut hints = self.hints.borrow_mut();
-            *hints = objects.into_iter().map(|s| QueryHint::new(&s)).collect();
-        }
-        /*else if bracket_comma_boundary > dot_boundary {
-            let objects = line.split('.');
-            println!("{:?}", objects);
-        }
-
-        else {
-            let mut hints = self.hints.borrow_mut();
-            *hints = query_hints().unwrap();
-        }
-        */
 
         let hints = self.hints.borrow();
         let candidates: Vec<Pair> = hints

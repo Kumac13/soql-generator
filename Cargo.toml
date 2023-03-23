@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.1.8", features = ["derive"] }
+lazy_static = "1.4.0"
 reqwest = {version= "0.11.14", features = ["blocking", "json"]}
 rustyline = { version = "11.0.0", features = ["derive"]}
 serde = {version = "1.0.152", features = ["derive"]}

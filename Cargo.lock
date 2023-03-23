@@ -1090,6 +1090,7 @@ name = "soql-generator"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "lazy_static",
  "reqwest",
  "rustyline",
  "serde",
