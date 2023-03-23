@@ -25,11 +25,8 @@ pub struct QueryHinter<'a> {
 impl<'a> QueryHinter<'a> {
     pub fn new(connection: &'a Connection) -> Self {
         let objects = connection.get_cached_objects();
-        let hints = HashSet::from_iter(objects.into_iter().map(|s| QueryHint::new(&s)));
-        QueryHinter {
-            connection,
-            hints: hints.into(),
-        }
+        let hints = HashSet::from_iter(objects.into_iter().map(|s| QueryHint::new(&s))).into();
+        QueryHinter { connection, hints }
     }
 
     fn update_hints(&self, line: &str) {
@@ -37,7 +34,7 @@ impl<'a> QueryHinter<'a> {
 
         let mut hints = self.hints.borrow_mut();
         if dot_boundary > 0 {
-            *hints = method_hints().unwrap();
+            *hints = method_hints();
         }
     }
 }
@@ -154,7 +151,7 @@ impl<'a> Completer for QueryHinter<'a> {
     }
 }
 
-pub fn method_hints() -> std::result::Result<HashSet<QueryHint>, Box<dyn std::error::Error>> {
+pub fn method_hints() -> HashSet<QueryHint> {
     let mut set = HashSet::new();
     set.insert(QueryHint::new("select("));
     set.insert(QueryHint::new("where("));
@@ -162,5 +159,5 @@ pub fn method_hints() -> std::result::Result<HashSet<QueryHint>, Box<dyn std::er
     set.insert(QueryHint::new("orderby("));
     set.insert(QueryHint::new("open("));
 
-    Ok(set)
+    set
 }
