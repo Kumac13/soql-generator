@@ -3,7 +3,6 @@ mod helper;
 mod hint;
 mod salesforce;
 
-use crate::hint::query_hints;
 use crate::salesforce::Connection;
 use clap::Parser;
 use helper::DynError;
@@ -40,10 +39,8 @@ async fn run() -> Result<(), DynError> {
     let mut conn = Connection::new().await?;
     conn.get_objects().await?;
 
-    let hinter = QueryHinter {
-        connection: &conn,
-        hints: query_hints().unwrap().into(),
-    };
+    let hinter = QueryHinter::new(&conn);
+
     let mut rl: Editor<QueryHinter, DefaultHistory> = Editor::new()?;
     rl.set_helper(Some(hinter));
 

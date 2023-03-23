@@ -3,8 +3,7 @@ use crate::salesforce::Connection;
 use rustyline::completion::{Completer, Pair};
 use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hint, Hinter};
-use rustyline::history::DefaultHistory;
-use rustyline::{Context, Editor, Helper, Result, Validator};
+use rustyline::{Context, Helper, Result, Validator};
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -24,6 +23,14 @@ pub struct QueryHinter<'a> {
 }
 
 impl<'a> QueryHinter<'a> {
+    pub fn new(connection: &'a Connection) -> Self {
+        let objects = connection.get_cached_objects();
+        QueryHinter {
+            connection,
+            hints: RefCell::new(objects.into_iter().map(|s| QueryHint::new(&s)).collect()),
+        }
+    }
+
     fn update_hints(&self, line: &str) {
         let dot_boundary = line.rfind('.').unwrap_or(0);
         let object_name = line.trim();
@@ -35,7 +42,7 @@ impl<'a> QueryHinter<'a> {
         if is_matching_object {
             *hints = objects.into_iter().map(|s| QueryHint::new(&s)).collect();
         } else if dot_boundary > 0 {
-            *hints = query_hints().unwrap();
+            *hints = method_hints().unwrap();
         }
     }
 }
@@ -152,7 +159,7 @@ impl<'a> Completer for QueryHinter<'a> {
     }
 }
 
-pub fn query_hints() -> std::result::Result<HashSet<QueryHint>, Box<dyn std::error::Error>> {
+pub fn method_hints() -> std::result::Result<HashSet<QueryHint>, Box<dyn std::error::Error>> {
     let json_data: Vec<JsonData> = serde_json::from_str(&fs::read_to_string("data.json")?)?;
     let mut set = HashSet::new();
 
