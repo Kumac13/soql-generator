@@ -1,6 +1,4 @@
-use std::borrow::Cow;
-use std::collections::HashSet;
-use std::fs;
+use crate::salesforce::Connection;
 
 use rustyline::completion::{Completer, Pair};
 use rustyline::highlight::Highlighter;
@@ -8,6 +6,10 @@ use rustyline::hint::{Hint, Hinter};
 use rustyline::history::DefaultHistory;
 use rustyline::{Context, Editor, Helper, Result, Validator};
 use serde::Deserialize;
+use std::borrow::Cow;
+use std::cell::RefCell;
+use std::collections::HashSet;
+use std::fs;
 use termion::{color, style};
 
 #[derive(Deserialize, Debug)]
@@ -16,8 +18,9 @@ struct JsonData {
 }
 
 #[derive(Helper, Validator)]
-pub struct QueryHinter {
-    pub hints: HashSet<QueryHint>,
+pub struct QueryHinter<'a> {
+    pub connection: &'a Connection,
+    pub hints: RefCell<HashSet<QueryHint>>,
 }
 
 #[derive(Hash, Debug, PartialEq, Eq)]
@@ -57,7 +60,7 @@ impl QueryHint {
     }
 }
 
-impl Hinter for QueryHinter {
+impl Hinter for QueryHinter<'_> {
     type Hint = QueryHint;
 
     fn hint(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Option<QueryHint> {
@@ -65,13 +68,38 @@ impl Hinter for QueryHinter {
             return None;
         }
 
+        let dot_boundary = line.rfind('.').unwrap_or(0);
+        let bracket_comma_boundary = line
+            .rfind(|c: char| c == '(' || c == ',')
+            .map(|idx| idx + 1)
+            .unwrap_or(0);
         let last_word_boundary = line
             .rfind(|c: char| c.is_whitespace() || c == '.' || c == '(' || c == ',')
             .map(|idx| idx + 1)
             .unwrap_or(0);
         let line_suffix = &line[last_word_boundary..];
 
-        self.hints
+        let object_name = line.trim();
+        let objects = self.connection.get_cached_objects();
+        let is_matching_object =
+            object_name.is_empty() || objects.contains(&object_name.to_string());
+
+        if is_matching_object {
+            let mut hints = self.hints.borrow_mut();
+            *hints = objects.into_iter().map(|s| QueryHint::new(&s)).collect();
+        }
+        /*else if bracket_comma_boundary > dot_boundary {
+            let objects = line.split('.');
+            println!("{:?}", objects);
+        }
+        else {
+            let mut hints = self.hints.borrow_mut();
+            *hints = query_hints().unwrap();
+        }
+        */
+
+        let hints = self.hints.borrow();
+        hints
             .iter()
             .filter_map(|hint| {
                 if hint.display.starts_with(line_suffix) {
@@ -84,20 +112,20 @@ impl Hinter for QueryHinter {
     }
 }
 
-impl Highlighter for QueryHinter {
+impl Highlighter for QueryHinter<'_> {
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
         let styled_hint = format!(
             "{}{}{}{}",
             style::Faint,
             color::Fg(color::LightWhite),
             hint,
-            style::Reset
+            style::Reset,
         );
         Cow::Owned(styled_hint)
     }
 }
 
-impl Completer for QueryHinter {
+impl<'a> Completer for QueryHinter<'a> {
     type Candidate = Pair;
 
     fn complete(
@@ -112,8 +140,28 @@ impl Completer for QueryHinter {
             .unwrap_or(0);
         let line_suffix = &line[last_word_boundary..];
 
-        let candidates: Vec<Pair> = self
-            .hints
+        let object_name = line.trim();
+        let objects = self.connection.get_cached_objects();
+        let is_matching_object =
+            object_name.is_empty() || objects.contains(&object_name.to_string());
+
+        if is_matching_object {
+            let mut hints = self.hints.borrow_mut();
+            *hints = objects.into_iter().map(|s| QueryHint::new(&s)).collect();
+        }
+        /*else if bracket_comma_boundary > dot_boundary {
+            let objects = line.split('.');
+            println!("{:?}", objects);
+        }
+
+        else {
+            let mut hints = self.hints.borrow_mut();
+            *hints = query_hints().unwrap();
+        }
+        */
+
+        let hints = self.hints.borrow();
+        let candidates: Vec<Pair> = hints
             .iter()
             .filter(|hint| hint.display.starts_with(line_suffix))
             .map(|hint| Pair {

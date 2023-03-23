@@ -37,8 +37,12 @@ async fn main() -> Result<(), DynError> {
 }
 
 async fn run() -> Result<(), DynError> {
+    let mut conn = Connection::new().await?;
+    conn.get_objects().await?;
+
     let hinter = QueryHinter {
-        hints: query_hints().unwrap(),
+        connection: &conn,
+        hints: query_hints().unwrap().into(),
     };
     let mut rl: Editor<QueryHinter, DefaultHistory> = Editor::new()?;
     rl.set_helper(Some(hinter));
@@ -46,9 +50,6 @@ async fn run() -> Result<(), DynError> {
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
-
-    let mut conn = Connection::new().await?;
-    conn.get_objects().await?;
 
     println!("Welcome to SOQL Generator");
     println!("Type 'exit' to quit");
