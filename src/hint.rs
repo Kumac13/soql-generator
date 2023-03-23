@@ -34,15 +34,9 @@ impl<'a> QueryHinter<'a> {
 
     fn update_hints(&self, line: &str) {
         let dot_boundary = line.rfind('.').unwrap_or(0);
-        let object_name = line.trim();
-        let objects = self.connection.get_cached_objects();
-        let is_matching_object =
-            object_name.is_empty() || objects.contains(&object_name.to_string());
 
         let mut hints = self.hints.borrow_mut();
-        if is_matching_object {
-            *hints = HashSet::from_iter(objects.into_iter().map(|s| QueryHint::new(&s)));
-        } else if dot_boundary > 0 {
+        if dot_boundary > 0 {
             *hints = method_hints().unwrap();
         }
     }
