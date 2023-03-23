@@ -25,9 +25,10 @@ pub struct QueryHinter<'a> {
 impl<'a> QueryHinter<'a> {
     pub fn new(connection: &'a Connection) -> Self {
         let objects = connection.get_cached_objects();
+        let hints = HashSet::from_iter(objects.into_iter().map(|s| QueryHint::new(&s)));
         QueryHinter {
             connection,
-            hints: RefCell::new(objects.into_iter().map(|s| QueryHint::new(&s)).collect()),
+            hints: hints.into(),
         }
     }
 
@@ -40,7 +41,7 @@ impl<'a> QueryHinter<'a> {
 
         let mut hints = self.hints.borrow_mut();
         if is_matching_object {
-            *hints = objects.into_iter().map(|s| QueryHint::new(&s)).collect();
+            *hints = HashSet::from_iter(objects.into_iter().map(|s| QueryHint::new(&s)));
         } else if dot_boundary > 0 {
             *hints = method_hints().unwrap();
         }
@@ -160,12 +161,12 @@ impl<'a> Completer for QueryHinter<'a> {
 }
 
 pub fn method_hints() -> std::result::Result<HashSet<QueryHint>, Box<dyn std::error::Error>> {
-    let json_data: Vec<JsonData> = serde_json::from_str(&fs::read_to_string("data.json")?)?;
     let mut set = HashSet::new();
-
-    for data in json_data {
-        set.insert(QueryHint::new(&data.value));
-    }
+    set.insert(QueryHint::new("select("));
+    set.insert(QueryHint::new("where("));
+    set.insert(QueryHint::new("limit("));
+    set.insert(QueryHint::new("orderby("));
+    set.insert(QueryHint::new("open("));
 
     Ok(set)
 }
