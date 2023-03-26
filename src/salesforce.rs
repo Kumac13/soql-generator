@@ -31,8 +31,8 @@ struct LoginResponse {
 
 pub struct Connection {
     login_response: LoginResponse,
-    objects: Vec<String>,
-    object_fields: HashMap<String, Vec<String>>,
+    pub objects: Vec<String>,
+    pub object_fields: HashMap<String, Vec<String>>,
 }
 
 impl Connection {
@@ -184,6 +184,15 @@ impl Connection {
 
     pub fn get_cached_object_fields(&self, object_name: &str) -> &Vec<String> {
         self.object_fields.get(object_name).unwrap()
+    }
+
+    pub async fn get_all_objects_and_fields(&mut self) -> Result<(), DynError> {
+        self.get_objects().await?;
+        let objects = ["Account", "Contact", "Conversion__c", "Opportunity"].to_vec();
+        for object_name in objects {
+            self.get_object_fields(&object_name).await?;
+        }
+        Ok(())
     }
 }
 

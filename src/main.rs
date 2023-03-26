@@ -1,9 +1,12 @@
+mod cache;
 mod engine;
 mod helper;
 mod hint;
 mod salesforce;
 
+use crate::cache::{load_cache_from_file, save_cache_to_file};
 use crate::salesforce::Connection;
+use chrono::Utc;
 use clap::Parser;
 use helper::DynError;
 use hint::QueryHinter;
@@ -37,7 +40,21 @@ async fn main() -> Result<(), DynError> {
 
 async fn run() -> Result<(), DynError> {
     let mut conn = Connection::new().await?;
-    conn.get_objects().await?;
+    let cache_data = match load_cache_from_file()? {
+        Some(data) => data,
+        None => {
+            conn.get_all_objects_and_fields().await?;
+            let cache_data = cache::CacheData {
+                objects: conn.objects.clone(),
+                object_fields: conn.object_fields.clone(),
+                last_cached: Utc::now(),
+            };
+            save_cache_to_file(&cache_data)?;
+            cache_data
+        }
+    };
+    conn.objects = cache_data.objects;
+    conn.object_fields = cache_data.object_fields;
 
     let hinter = QueryHinter::new(&conn);
 
