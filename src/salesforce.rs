@@ -125,15 +125,15 @@ impl Connection {
             .json::<Value>()
             .await?;
 
-        let object_names: Vec<String> = response["sobjects"].as_array().map_or_else(
-            || Vec::new(),
-            |sobjects| {
-                sobjects
-                    .iter()
-                    .filter_map(|sobject| sobject["name"].as_str().map(String::from))
-                    .collect()
-            },
-        );
+        let object_names: Vec<String> =
+            response["sobjects"]
+                .as_array()
+                .map_or_else(Vec::new, |sobjects| {
+                    sobjects
+                        .iter()
+                        .filter_map(|sobject| sobject["name"].as_str().map(String::from))
+                        .collect()
+                });
 
         self.objects = object_names;
 
@@ -163,15 +163,15 @@ impl Connection {
             .json::<Value>()
             .await?;
 
-        let field_names: Vec<String> = response["fields"].as_array().map_or_else(
-            || Vec::new(),
-            |fields| {
-                fields
-                    .iter()
-                    .filter_map(|field| field["name"].as_str().map(String::from))
-                    .collect()
-            },
-        );
+        let field_names: Vec<String> =
+            response["fields"]
+                .as_array()
+                .map_or_else(Vec::new, |fields| {
+                    fields
+                        .iter()
+                        .filter_map(|field| field["name"].as_str().map(String::from))
+                        .collect()
+                });
 
         self.object_fields
             .insert(object_name.to_string(), field_names);
@@ -188,8 +188,10 @@ impl Connection {
 
     pub async fn get_all_objects_and_fields(&mut self) -> Result<(), DynError> {
         self.get_objects().await?;
-        let objects = ["Account", "Contact", "Conversion__c", "Opportunity"].to_vec();
-        for object_name in objects {
+        println!(
+            "Retrieving fields for the object. This process may take several minutes to complete."
+        );
+        for object_name in self.objects.clone() {
             self.get_object_fields(&object_name).await?;
         }
         Ok(())
