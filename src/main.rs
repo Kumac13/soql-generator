@@ -8,11 +8,14 @@ use crate::cache::{load_cache_from_file, save_cache_to_file};
 use crate::salesforce::Connection;
 use chrono::Utc;
 use clap::Parser;
+use dirs_next::cache_dir;
 use helper::DynError;
 use hint::QueryHinter;
 use rustyline::error::ReadlineError;
 use rustyline::history::DefaultHistory;
 use rustyline::Editor;
+use std::fs;
+use std::path::PathBuf;
 
 /// Tool for interactively executing SOQL queries
 #[derive(Parser, Debug)]
@@ -39,8 +42,20 @@ async fn main() -> Result<(), DynError> {
 }
 
 async fn run() -> Result<(), DynError> {
+    let cache_dir = match cache_dir() {
+        Some(cache_dir) => cache_dir.join("soql-generator"),
+        None => PathBuf::from("/tmp/soql-generator"),
+    };
+
+    if !cache_dir.exists() {
+        fs::create_dir_all(&cache_dir)?;
+    }
+
+    let history_path = cache_dir.join("history.txt");
+    let cache_data_path = cache_dir.join("cache_data.json");
+
     let mut conn = Connection::new().await?;
-    let cache_data = match load_cache_from_file()? {
+    let cache_data = match load_cache_from_file(&cache_data_path)? {
         Some(data) => data,
         None => {
             conn.get_all_objects_and_fields().await?;
@@ -49,7 +64,7 @@ async fn run() -> Result<(), DynError> {
                 object_fields: conn.object_fields.clone(),
                 last_cached: Utc::now(),
             };
-            save_cache_to_file(&cache_data)?;
+            save_cache_to_file(&cache_data, &cache_data_path)?;
             cache_data
         }
     };
@@ -61,7 +76,7 @@ async fn run() -> Result<(), DynError> {
     let mut rl: Editor<QueryHinter, DefaultHistory> = Editor::new()?;
     rl.set_helper(Some(hinter));
 
-    if rl.load_history("history.txt").is_err() {
+    if rl.load_history(&history_path).is_err() {
         println!("No previous history.");
     }
 

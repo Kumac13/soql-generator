@@ -1228,6 +1228,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "dirs-next",
  "lazy_static",
  "reqwest",
  "rustyline",
