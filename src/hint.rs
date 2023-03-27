@@ -4,17 +4,10 @@ use rustyline::completion::{Completer, Pair};
 use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hint, Hinter};
 use rustyline::{Context, Helper, Result, Validator};
-use serde::Deserialize;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashSet;
-use std::fs;
 use termion::{color, style};
-
-#[derive(Deserialize, Debug)]
-struct JsonData {
-    value: String,
-}
 
 #[derive(Helper, Validator)]
 pub struct QueryHinter<'a> {
@@ -25,16 +18,27 @@ pub struct QueryHinter<'a> {
 impl<'a> QueryHinter<'a> {
     pub fn new(connection: &'a Connection) -> Self {
         let objects = connection.get_cached_objects();
-        let hints = HashSet::from_iter(objects.into_iter().map(|s| QueryHint::new(&s))).into();
+        let hints = HashSet::from_iter(objects.iter().map(|s| QueryHint::new(s))).into();
         QueryHinter { connection, hints }
     }
 
     fn update_hints(&self, line: &str) {
         let dot_boundary = line.rfind('.').unwrap_or(0);
+        let bracket_comma_boundary = line.rfind(|c: char| c == ',' || c == '(').unwrap_or(0);
 
         let mut hints = self.hints.borrow_mut();
         if dot_boundary > 0 {
-            *hints = method_hints();
+            if bracket_comma_boundary > dot_boundary {
+                let object_name = line.split('.').next().unwrap().trim();
+                *hints = HashSet::from_iter(
+                    self.connection
+                        .get_cached_object_fields(object_name)
+                        .iter()
+                        .map(|s| QueryHint::new(s)),
+                );
+            } else {
+                *hints = method_hints();
+            }
         }
     }
 }
