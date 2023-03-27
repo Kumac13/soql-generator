@@ -117,7 +117,7 @@ async fn run() -> Result<(), DynError> {
         }
     }
 
-    if let Err(e) = rl.save_history("history.txt") {
+    if let Err(e) = rl.save_history(&history_path) {
         eprintln!("Failed to save history: {}", e);
     }
 
