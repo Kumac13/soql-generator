@@ -1,5 +1,7 @@
+mod lexer;
 mod parser;
 mod querygen;
+mod token;
 
 use crate::helper::DynError;
 
