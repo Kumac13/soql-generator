@@ -11,6 +11,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     let mut input = input.chars().peekable();
 
     while let Some(c) = input.next() {
+        if c.is_whitespace() {
+            continue;
+        }
+
         match c {
             '=' => tokens.push(Token::new(TokenKind::Eq, String::from("="))),
             ',' => tokens.push(Token::new(TokenKind::Comma, String::from(","))),
@@ -31,7 +35,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     tokens.push(Token::new(TokenKind::Bang, String::from("!")));
                 }
             }
-            // TODO: need to match ' '
             _ => {
                 if c.is_ascii_digit() {
                     tokens.push(Token::new(
@@ -112,10 +115,9 @@ mod tests {
         );
     }
 
-    /*
     #[test]
     fn test_tokenize() {
-        let input = "Account.select(Id, Name)";
+        let input = "Account.select(Id, Name).where(Id = 1).orderby(Id, Name DESC).limit(10)";
         let expected = vec![
             Token::new(TokenKind::Identifire, String::from("Account")),
             Token::new(TokenKind::Dot, String::from(".")),
@@ -125,10 +127,29 @@ mod tests {
             Token::new(TokenKind::Comma, String::from(",")),
             Token::new(TokenKind::Identifire, String::from("Name")),
             Token::new(TokenKind::Rparen, String::from(")")),
+            Token::new(TokenKind::Dot, String::from(".")),
+            Token::new(TokenKind::Where, String::from("where")),
+            Token::new(TokenKind::Lparen, String::from("(")),
+            Token::new(TokenKind::Identifire, String::from("Id")),
+            Token::new(TokenKind::Eq, String::from("=")),
+            Token::new(TokenKind::Integer, String::from("1")),
+            Token::new(TokenKind::Rparen, String::from(")")),
+            Token::new(TokenKind::Dot, String::from(".")),
+            Token::new(TokenKind::Orderby, String::from("orderby")),
+            Token::new(TokenKind::Lparen, String::from("(")),
+            Token::new(TokenKind::Identifire, String::from("Id")),
+            Token::new(TokenKind::Comma, String::from(",")),
+            Token::new(TokenKind::Identifire, String::from("Name")),
+            Token::new(TokenKind::Desc, String::from("DESC")),
+            Token::new(TokenKind::Rparen, String::from(")")),
+            Token::new(TokenKind::Dot, String::from(".")),
+            Token::new(TokenKind::Limit, String::from("limit")),
+            Token::new(TokenKind::Lparen, String::from("(")),
+            Token::new(TokenKind::Integer, String::from("10")),
+            Token::new(TokenKind::Rparen, String::from(")")),
         ];
 
         let tokens = tokenize(input);
         assert_eq!(tokens, expected);
     }
-    */
 }
