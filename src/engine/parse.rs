@@ -126,21 +126,11 @@ impl Parser {
     fn parse_select_groupby_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         let token = self.next_token().unwrap();
 
-        if !self.expect_peek(TokenKind::Lparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\'(\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
+        self.expect_peek(TokenKind::Lparen)?;
 
         let fields = self.parse_fileds()?;
 
-        if !self.expect_peek(TokenKind::Rparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\')\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
+        self.expect_peek(TokenKind::Rparen)?;
 
         let statement: Box<dyn Statement> = match token.kind {
             TokenKind::Select => Box::new(SelectStatement { token, fields }),
@@ -155,21 +145,11 @@ impl Parser {
     fn parse_orderby_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         let token = self.next_token().unwrap();
 
-        if !self.expect_peek(TokenKind::Lparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\'(\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
+        self.expect_peek(TokenKind::Lparen)?;
 
         let options = self.parse_orderby_options()?;
 
-        if !self.expect_peek(TokenKind::Rparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\')\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
+        self.expect_peek(TokenKind::Rparen)?;
 
         Ok(Box::new(OrderByStatement { token, options }))
     }
@@ -178,21 +158,11 @@ impl Parser {
     fn parse_limit_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         let token = self.next_token().unwrap();
 
-        if !self.expect_peek(TokenKind::Lparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\'(\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
+        self.expect_peek(TokenKind::Lparen)?;
 
         let limit = self.parse_integer_literal()?;
 
-        if !self.expect_peek(TokenKind::Rparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\')\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
+        self.expect_peek(TokenKind::Rparen)?;
 
         Ok(Box::new(LimitStatement { token, limit }))
     }
@@ -201,19 +171,8 @@ impl Parser {
     fn parse_open_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         let token = self.next_token().unwrap();
 
-        if !self.expect_peek(TokenKind::Lparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\'(\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
-
-        if !self.expect_peek(TokenKind::Rparen) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("\')\'"),
-                self.peek_token().unwrap().literal(),
-            ));
-        }
+        self.expect_peek(TokenKind::Lparen)?;
+        self.expect_peek(TokenKind::Rparen)?;
 
         Ok(Box::new(OpenStatement { token }))
     }
@@ -231,12 +190,8 @@ impl Parser {
                 break;
             }
 
-            if !self.expect_peek(TokenKind::Comma) {
-                return Err(ParseError::UnexpectedToken(
-                    String::from("\',\'"),
-                    self.peek_token().unwrap().literal(),
-                ));
-            }
+            self.expect_peek(TokenKind::Comma)?;
+
             self.next_token();
 
             fields.push(field);
@@ -250,13 +205,11 @@ impl Parser {
         let token = self.current_token.clone();
         let mut name = self.current_token.literal();
 
-        if self.expect_peek(TokenKind::Dot) {
-            if !self.expect_peek(TokenKind::Identifire) {
-                return Err(ParseError::UnexpectedToken(
-                    String::from("Identifier"),
-                    self.peek_token().unwrap().literal(),
-                ));
-            }
+        if self.peek_token_is(TokenKind::Dot) {
+            self.next_token();
+
+            self.expect_peek(TokenKind::Identifire)?;
+
             name = format!("{}.{}", name, self.current_token.literal());
         }
 
@@ -289,12 +242,7 @@ impl Parser {
                 break;
             }
 
-            if !self.expect_peek(TokenKind::Comma) {
-                return Err(ParseError::UnexpectedToken(
-                    String::from("\',\'"),
-                    self.peek_token().unwrap().literal(),
-                ));
-            }
+            self.expect_peek(TokenKind::Comma)?;
 
             self.next_token();
 
@@ -317,12 +265,15 @@ impl Parser {
         self.peek_token().map_or(false, |token| token.kind == kind)
     }
 
-    fn expect_peek(&mut self, kind: TokenKind) -> bool {
-        if self.peek_token_is(kind) {
+    fn expect_peek(&mut self, kind: TokenKind) -> Result<(), ParseError> {
+        if self.peek_token_is(kind.clone()) {
             self.next_token();
-            true
+            Ok(())
         } else {
-            false
+            Err(ParseError::UnexpectedToken(
+                kind.to_string(),
+                self.peek_token().unwrap().literal(),
+            ))
         }
     }
 }
