@@ -25,6 +25,10 @@ pub enum TokenKind {
     Desc,
     Eq,
     NotEq,
+    Greater,
+    GreaterEq,
+    Less,
+    LessEq,
 }
 
 #[derive(Debug, PartialEq, Clone)]

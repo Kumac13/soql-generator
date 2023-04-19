@@ -17,6 +17,30 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
         match c {
             '=' => tokens.push(Token::new(TokenKind::Eq, String::from("="))),
+            '>' => {
+                if let Some(c) = input.peek() {
+                    if *c == '=' {
+                        tokens.push(Token::new(TokenKind::GreaterEq, String::from(">=")));
+                        input.next();
+                    } else {
+                        tokens.push(Token::new(TokenKind::Greater, String::from(">")));
+                    }
+                } else {
+                    tokens.push(Token::new(TokenKind::Greater, String::from(">")));
+                }
+            }
+            '<' => {
+                if let Some(c) = input.peek() {
+                    if *c == '=' {
+                        tokens.push(Token::new(TokenKind::LessEq, String::from("<=")));
+                        input.next();
+                    } else {
+                        tokens.push(Token::new(TokenKind::Less, String::from("<")));
+                    }
+                } else {
+                    tokens.push(Token::new(TokenKind::Less, String::from("<")));
+                }
+            }
             ',' => tokens.push(Token::new(TokenKind::Comma, String::from(","))),
             '.' => tokens.push(Token::new(TokenKind::Dot, String::from("."))),
             '(' => tokens.push(Token::new(TokenKind::Lparen, String::from("("))),
@@ -36,7 +60,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
             '\'' => {
-                let mut string_obj = consume_string_object(&mut input);
+                let string_obj = consume_string_object(&mut input);
                 tokens.push(Token::new(TokenKind::StringObject, string_obj));
             }
             _ => {
@@ -133,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_tokenize() {
-        let input = "Account.select(Id, Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%').orderby(Id, Name DESC).limit(10)";
+        let input = "Account.select(Id, Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10').orderby(Id, Name DESC).limit(10)";
         let expected = vec![
             Token::new(TokenKind::Identifire, String::from("Account")),
             Token::new(TokenKind::Dot, String::from(".")),
@@ -158,6 +182,11 @@ mod tests {
             Token::new(TokenKind::Identifire, String::from("Name")),
             Token::new(TokenKind::Like, String::from("LIKE")),
             Token::new(TokenKind::StringObject, String::from("%fuga%")),
+            Token::new(TokenKind::Rparen, String::from(")")),
+            Token::new(TokenKind::And, String::from("AND")),
+            Token::new(TokenKind::Identifire, String::from("CreatedDated")),
+            Token::new(TokenKind::GreaterEq, String::from(">=")),
+            Token::new(TokenKind::StringObject, String::from("2022-11-10")),
             Token::new(TokenKind::Rparen, String::from(")")),
             Token::new(TokenKind::Dot, String::from(".")),
             Token::new(TokenKind::Orderby, String::from("orderby")),
