@@ -92,7 +92,7 @@ fn consume_integer(input: &mut Peekable<Chars>, current_c: char) -> String {
 fn consume_literal(input: &mut Peekable<Chars>, current_c: char) -> String {
     let mut literal = String::from(current_c);
     while let Some(c) = input.peek() {
-        if is_literal(*c) {
+        if is_literal(*c) || c.is_ascii_digit() {
             literal.push(*c);
             input.next();
         } else {
