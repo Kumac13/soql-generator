@@ -111,7 +111,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         match self.peek_token() {
             Some(token) => match token.kind {
-                TokenKind::Select => self.parse_select_statement(),
+                TokenKind::Select | TokenKind::Groupby => self.parse_select_groupby_statement(),
                 TokenKind::Limit => self.parse_limit_statement(),
                 TokenKind::Open => self.parse_open_statement(),
                 _ => Err(ParseError::InvalidMethod(String::from("SELECT"))),
@@ -121,7 +121,8 @@ impl Parser {
     }
 
     // <select_statement> := 'select' '(' <field> (',' <field>)* ')'
-    fn parse_select_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+    // <groupby_statement> := 'groupby' '(' <field> (',' <field>)* ')'
+    fn parse_select_groupby_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         let token = self.next_token().unwrap();
 
         if !self.expect_peek(TokenKind::Lparen) {
@@ -140,7 +141,13 @@ impl Parser {
             ));
         }
 
-        Ok(Box::new(SelectStatement { token, fields }))
+        let statement: Box<dyn Statement> = match token.kind {
+            TokenKind::Select => Box::new(SelectStatement { token, fields }),
+            TokenKind::Groupby => Box::new(GroupByStatement { token, fields }),
+            _ => unreachable!(),
+        };
+
+        Ok(statement)
     }
 
     // <limit_statement> := 'limit' '(' <integer> ')'
@@ -281,6 +288,21 @@ mod tests {
         assert_eq!(
             program.statements[1].string(),
             "select(Id, Name, Account.Name, Contract.LastName)".to_string()
+        );
+    }
+
+    #[test]
+    fn test_parse_groupby() {
+        let input = "Opportunity.groupby(Id, Name, Account.Name)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(program.statements[1].token_literal(), "groupby".to_string());
+        assert_eq!(
+            program.statements[1].string(),
+            "groupby(Id, Name, Account.Name)".to_string()
         );
     }
 

@@ -83,6 +83,30 @@ impl Statement for SelectStatement {
 }
 
 #[derive(Debug)]
+pub struct GroupByStatement {
+    pub token: Token,
+    pub fields: Vec<FieldLiteral>,
+}
+
+impl Node for GroupByStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = self.token_literal();
+        let params: Vec<String> = self.fields.iter().map(|f| f.string()).collect();
+        s += "(";
+        s += &params.join(", ");
+        s += ")";
+        s
+    }
+}
+impl Statement for GroupByStatement {
+    fn statement_node(&self) {}
+}
+
+#[derive(Debug)]
 pub struct LimitStatement {
     pub token: Token,
     pub limit: IntegerLiteral,
