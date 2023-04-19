@@ -78,6 +78,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
         }
     }
+    tokens.push(Token::new(TokenKind::Eof, String::from("")));
     tokens
 }
 
@@ -201,6 +202,7 @@ mod tests {
             Token::new(TokenKind::Lparen, String::from("(")),
             Token::new(TokenKind::Integer, String::from("10")),
             Token::new(TokenKind::Rparen, String::from(")")),
+            Token::new(TokenKind::Eof, String::from("")),
         ];
 
         let tokens = tokenize(input);
