@@ -202,4 +202,33 @@ mod tests {
         let tokens = tokenize(input);
         assert_eq!(tokens, expected);
     }
+
+    #[test]
+    fn test_consume_ineger() {
+        let mut input = "1234567890".chars().peekable();
+        input.next();
+        let num = consume_integer(&mut input, '1');
+        assert_eq!(num, "1234567890");
+    }
+
+    #[test]
+    fn test_consume_literal() {
+        let mut input = "Account".chars().peekable();
+        input.next();
+        let literal = consume_literal(&mut input, 'A');
+        assert_eq!(literal, "Account");
+
+        let mut input = "Product2__c".chars().peekable();
+        input.next();
+        let literal = consume_literal(&mut input, 'P');
+        assert_eq!(literal, "Product2__c");
+    }
+
+    #[test]
+    fn test_consume_string_object() {
+        let mut input = "'%Test'".chars().peekable();
+        input.next();
+        let string_obj = consume_string_object(&mut input);
+        assert_eq!(string_obj, "%Test");
+    }
 }
