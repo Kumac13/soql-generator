@@ -111,12 +111,36 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         match self.peek_token() {
             Some(token) => match token.kind {
+                TokenKind::Select => self.parse_select_statement(),
                 TokenKind::Limit => self.parse_limit_statement(),
                 TokenKind::Open => self.parse_open_statement(),
                 _ => Err(ParseError::InvalidMethod(String::from("SELECT"))),
             },
             None => Err(ParseError::InvalidMethod(String::from(""))),
         }
+    }
+
+    // <select_statement> := 'select' '(' <field> (',' <field>)* ')'
+    fn parse_select_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+        let token = self.next_token().unwrap();
+
+        if !self.expect_peek(TokenKind::Lparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\'(\'"),
+                self.peek_token().unwrap().literal(),
+            ));
+        }
+
+        let fields = self.parse_fileds()?;
+
+        if !self.expect_peek(TokenKind::Rparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\')\'"),
+                self.peek_token().unwrap().literal(),
+            ));
+        }
+
+        Ok(Box::new(SelectStatement { token, fields }))
     }
 
     // <limit_statement> := 'limit' '(' <integer> ')'
@@ -163,6 +187,45 @@ impl Parser {
         Ok(Box::new(OpenStatement { token }))
     }
 
+    // <field> := <identifier> | <identifire> <dot> <identifier>
+    fn parse_fileds(&mut self) -> Result<Vec<FieldLiteral>, ParseError> {
+        let mut fields = Vec::new();
+
+        self.next_token();
+
+        while !self.peek_token_is(TokenKind::Rparen) {
+            let token = self.current_token.clone();
+            let mut name = self.current_token.literal();
+
+            if self.expect_peek(TokenKind::Dot) {
+                if !self.expect_peek(TokenKind::Identifire) {
+                    return Err(ParseError::UnexpectedToken(
+                        String::from("Identifier"),
+                        self.peek_token().unwrap().literal(),
+                    ));
+                }
+                name = format!("{}.{}", name, self.current_token.literal());
+            }
+
+            if self.peek_token_is(TokenKind::Rparen) {
+                fields.push(FieldLiteral { token, name });
+                break;
+            }
+
+            if !self.expect_peek(TokenKind::Comma) {
+                return Err(ParseError::UnexpectedToken(
+                    String::from("\',\'"),
+                    self.peek_token().unwrap().literal(),
+                ));
+            }
+            self.next_token();
+
+            fields.push(FieldLiteral { token, name });
+        }
+
+        Ok(fields)
+    }
+
     fn parse_integer_literal(&mut self) -> Result<IntegerLiteral, ParseError> {
         let token = self.next_token().unwrap();
         let value = token.literal().parse::<i64>().unwrap();
@@ -207,6 +270,21 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_select() {
+        let input = "Opportunity.select(Id, Name, Account.Name, Contract.LastName)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(program.statements[1].token_literal(), "select".to_string());
+        assert_eq!(
+            program.statements[1].string(),
+            "select(Id, Name, Account.Name, Contract.LastName)".to_string()
+        );
+    }
+
+    #[test]
     fn test_parse_open() {
         let input = "Account.open()";
         let tokens = tokenize(input);
@@ -227,6 +305,6 @@ mod tests {
 
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "limit".to_string());
-        assert_eq!(program.statements[1].string(), "limit( 10 )".to_string());
+        assert_eq!(program.statements[1].string(), "limit(10)".to_string());
     }
 }

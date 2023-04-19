@@ -58,6 +58,31 @@ impl Statement for Table {
 }
 
 #[derive(Debug)]
+pub struct SelectStatement {
+    pub token: Token,
+    pub fields: Vec<FieldLiteral>,
+}
+
+impl Node for SelectStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = self.token_literal();
+        let params: Vec<String> = self.fields.iter().map(|f| f.string()).collect();
+        s += "(";
+        s += &params.join(", ");
+        s += ")";
+        s
+    }
+}
+
+impl Statement for SelectStatement {
+    fn statement_node(&self) {}
+}
+
+#[derive(Debug)]
 pub struct LimitStatement {
     pub token: Token,
     pub limit: IntegerLiteral,
@@ -70,9 +95,9 @@ impl Node for LimitStatement {
 
     fn string(&self) -> String {
         let mut s = self.token_literal();
-        s += "( ";
+        s += "(";
         s += &self.limit.string();
-        s += " )";
+        s += ")";
         s
     }
 }
@@ -117,6 +142,26 @@ impl Node for IntegerLiteral {
 }
 
 impl Expression for IntegerLiteral {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct FieldLiteral {
+    pub token: Token,
+    pub name: String,
+}
+
+impl Node for FieldLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl Expression for FieldLiteral {
     fn expression_node(&self) {}
 }
 
