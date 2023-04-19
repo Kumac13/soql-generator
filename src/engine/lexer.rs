@@ -104,7 +104,7 @@ fn consume_literal(input: &mut Peekable<Chars>, current_c: char) -> String {
 
 fn consume_string_object(input: &mut Peekable<Chars>) -> String {
     let mut string_obj = String::new();
-    while let Some(c) = input.next() {
+    for c in input.by_ref() {
         if c == '\'' {
             break;
         }

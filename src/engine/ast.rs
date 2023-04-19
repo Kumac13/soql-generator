@@ -20,7 +20,7 @@ pub struct Program {
 
 impl Node for Program {
     fn token_literal(&self) -> String {
-        if self.statements.len() > 0 {
+        if !self.statements.is_empty() {
             self.statements[0].token_literal()
         } else {
             "".to_string()
@@ -51,7 +51,7 @@ pub struct OpenStatement {
 
 impl Node for OpenStatement {
     fn token_literal(&self) -> String {
-        self.token.literal().clone()
+        self.token.literal()
     }
 }
 

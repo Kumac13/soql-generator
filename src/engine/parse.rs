@@ -87,8 +87,6 @@ impl Parser {
             }
         }
 
-        println!("statements: {:?}", statements);
-
         Ok(Program { statements })
     }
 
@@ -108,19 +106,16 @@ impl Parser {
         if !self.expect_peek(TokenKind::Lparen) {
             return Err(ParseError::UnexpectedToken(
                 String::from("\'(\'"),
-                self.current_token.literal(),
+                self.peek_token().unwrap().literal(),
             ));
         }
 
         if !self.expect_peek(TokenKind::Rparen) {
             return Err(ParseError::UnexpectedToken(
                 String::from("\')\'"),
-                self.current_token.literal(),
+                self.peek_token().unwrap().literal(),
             ));
         }
-
-        println!("self.current_token: {:?}", self.current_token);
-        println!("self.peek_token:  {:?}", self.peek_token());
 
         Ok(Box::new(OpenStatement { token }))
     }
