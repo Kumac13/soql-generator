@@ -6,7 +6,6 @@ pub enum TokenKind {
     Dot,
     Lparen,
     Rparen,
-    Bang,
     Integer,
     Identifire,
     StringObject,
