@@ -42,4 +42,8 @@ impl Token {
     pub fn new(kind: TokenKind, literal: String) -> Self {
         Self { kind, literal }
     }
+
+    pub fn literal(&self) -> String {
+        self.literal.clone()
+    }
 }

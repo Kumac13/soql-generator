@@ -1,4 +1,6 @@
+mod ast;
 mod lexer;
+mod parse;
 mod parser;
 mod querygen;
 mod token;
