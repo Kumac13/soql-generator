@@ -115,7 +115,9 @@ impl Parser {
                 TokenKind::Orderby => self.parse_orderby_statement(),
                 TokenKind::Limit => self.parse_limit_statement(),
                 TokenKind::Open => self.parse_open_statement(),
-                _ => Err(ParseError::InvalidMethod(String::from("SELECT"))),
+                _ => Err(ParseError::InvalidMethod(
+                    self.peek_token().unwrap().literal(),
+                )),
             },
             None => Err(ParseError::InvalidMethod(String::from(""))),
         }
