@@ -9,6 +9,7 @@ pub enum TokenKind {
     Bang,
     Integer,
     Identifire,
+    StringObject,
     // Methods
     Select,
     Where,

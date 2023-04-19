@@ -35,6 +35,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     tokens.push(Token::new(TokenKind::Bang, String::from("!")));
                 }
             }
+            '\'' => {
+                let mut string_obj = consume_string_object(&mut input);
+                tokens.push(Token::new(TokenKind::StringObject, string_obj));
+            }
             _ => {
                 if c.is_ascii_digit() {
                     tokens.push(Token::new(
@@ -79,6 +83,18 @@ fn consume_literal(input: &mut Peekable<Chars>, current_c: char) -> String {
     literal
 }
 
+fn consume_string_object(input: &mut Peekable<Chars>) -> String {
+    let mut string_obj = String::new();
+    while let Some(c) = input.next() {
+        if c == '\'' {
+            break;
+        }
+        string_obj.push(c);
+        continue;
+    }
+    string_obj
+}
+
 fn is_literal(c: char) -> bool {
     c.is_alphabetic() || c == '_'
 }
@@ -117,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_tokenize() {
-        let input = "Account.select(Id, Name).where(Id = 1).orderby(Id, Name DESC).limit(10)";
+        let input = "Account.select(Id, Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%').orderby(Id, Name DESC).limit(10)";
         let expected = vec![
             Token::new(TokenKind::Identifire, String::from("Account")),
             Token::new(TokenKind::Dot, String::from(".")),
@@ -133,6 +149,15 @@ mod tests {
             Token::new(TokenKind::Identifire, String::from("Id")),
             Token::new(TokenKind::Eq, String::from("=")),
             Token::new(TokenKind::Integer, String::from("1")),
+            Token::new(TokenKind::And, String::from("AND")),
+            Token::new(TokenKind::Lparen, String::from("(")),
+            Token::new(TokenKind::Identifire, String::from("Name")),
+            Token::new(TokenKind::Like, String::from("LIKE")),
+            Token::new(TokenKind::StringObject, String::from("%hoge%")),
+            Token::new(TokenKind::Or, String::from("OR")),
+            Token::new(TokenKind::Identifire, String::from("Name")),
+            Token::new(TokenKind::Like, String::from("LIKE")),
+            Token::new(TokenKind::StringObject, String::from("%fuga%")),
             Token::new(TokenKind::Rparen, String::from(")")),
             Token::new(TokenKind::Dot, String::from(".")),
             Token::new(TokenKind::Orderby, String::from("orderby")),
