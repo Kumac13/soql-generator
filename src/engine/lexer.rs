@@ -224,6 +224,7 @@ mod tests {
         let literal = consume_literal(&mut input, 'A');
         assert_eq!(literal, "Account");
 
+        // case: literal with underscore and integer in the middle
         let mut input = "Product2__c".chars().peekable();
         input.next();
         let literal = consume_literal(&mut input, 'P');
