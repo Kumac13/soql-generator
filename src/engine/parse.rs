@@ -90,9 +90,11 @@ impl Parser {
         Ok(Program { statements })
     }
 
+    // <statement> := <limit_statement> | <open_statement>
     fn parse_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         match self.peek_token() {
             Some(token) => match token.kind {
+                TokenKind::Limit => self.parse_limit_statement(),
                 TokenKind::Open => self.parse_open_statement(),
                 _ => Err(ParseError::InvalidMethod(String::from("SELECT"))),
             },
@@ -100,6 +102,30 @@ impl Parser {
         }
     }
 
+    // <limit_statement> := 'limit' '(' <integer> ')'
+    fn parse_limit_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+        let token = self.next_token().unwrap();
+
+        if !self.expect_peek(TokenKind::Lparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\'(\'"),
+                self.peek_token().unwrap().literal(),
+            ));
+        }
+
+        let limit = self.parse_integer_literal()?;
+
+        if !self.expect_peek(TokenKind::Rparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\')\'"),
+                self.peek_token().unwrap().literal(),
+            ));
+        }
+
+        Ok(Box::new(LimitStatement { token, limit }))
+    }
+
+    // <open_statement> := 'open' '(' ')'
     fn parse_open_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
         let token = self.next_token().unwrap();
 
@@ -134,6 +160,12 @@ impl Parser {
             token: self.current_token.clone(),
             table_name,
         }))
+    }
+
+    fn parse_integer_literal(&mut self) -> Result<IntegerLiteral, ParseError> {
+        let token = self.next_token().unwrap();
+        let value = token.literal().parse::<i64>().unwrap();
+        Ok(IntegerLiteral { token, value })
     }
 
     fn current_token_is(&mut self, kind: TokenKind) -> bool {
@@ -182,5 +214,18 @@ mod tests {
 
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "open".to_string());
+        assert_eq!(program.statements[1].string(), "open".to_string());
+    }
+
+    #[test]
+    fn test_parse_limit() {
+        let input = "Account.limit(10)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(program.statements[1].token_literal(), "limit".to_string());
+        assert_eq!(program.statements[1].string(), "limit( 10 )".to_string());
     }
 }

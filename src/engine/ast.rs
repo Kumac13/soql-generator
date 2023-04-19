@@ -3,6 +3,7 @@ use core::fmt::Debug;
 
 pub trait Node {
     fn token_literal(&self) -> String;
+    fn string(&self) -> String;
 }
 
 pub trait Statement: Node + Debug {
@@ -26,6 +27,14 @@ impl Node for Program {
             "".to_string()
         }
     }
+
+    fn string(&self) -> String {
+        if !self.statements.is_empty() {
+            self.statements[0].token_literal()
+        } else {
+            "".to_string()
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -38,9 +47,37 @@ impl Node for Table {
     fn token_literal(&self) -> String {
         self.table_name.clone()
     }
+
+    fn string(&self) -> String {
+        self.table_name.clone()
+    }
 }
 
 impl Statement for Table {
+    fn statement_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct LimitStatement {
+    pub token: Token,
+    pub limit: IntegerLiteral,
+}
+
+impl Node for LimitStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = self.token_literal();
+        s += "( ";
+        s += &self.limit.string();
+        s += " )";
+        s
+    }
+}
+
+impl Statement for LimitStatement {
     fn statement_node(&self) {}
 }
 
@@ -53,10 +90,34 @@ impl Node for OpenStatement {
     fn token_literal(&self) -> String {
         self.token.literal()
     }
+
+    fn string(&self) -> String {
+        self.token_literal()
+    }
 }
 
 impl Statement for OpenStatement {
     fn statement_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: i64,
+}
+
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        self.value.to_string()
+    }
+}
+
+impl Expression for IntegerLiteral {
+    fn expression_node(&self) {}
 }
 
 // <program> := <table> <statement>*
