@@ -51,12 +51,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         tokens.push(Token::new(TokenKind::NotEq, String::from("!=")));
                         input.next();
                     } else {
-                        // TODO: error
-                        tokens.push(Token::new(TokenKind::Bang, String::from("!")));
+                        tokens.push(Token::new(TokenKind::Illegal, String::from("!")));
                     }
                 } else {
-                    // TDDO: error
-                    tokens.push(Token::new(TokenKind::Bang, String::from("!")));
+                    tokens.push(Token::new(TokenKind::Illegal, String::from("!")));
                 }
             }
             '\'' => {
