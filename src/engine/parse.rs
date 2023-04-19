@@ -10,6 +10,8 @@ use std::{
 #[derive(Debug)]
 pub enum ParseError {
     UnexpectedToken(String, String),
+    InvalidMethod(String),
+    Eof,
 }
 
 impl Display for ParseError {
@@ -22,6 +24,10 @@ impl Display for ParseError {
                     message, token_literal
                 )
             }
+            ParseError::InvalidMethod(method) => {
+                write!(f, "Invalid method: {}", method)
+            }
+            ParseError::Eof => write!(f, "Unexpected EOF"),
         }
     }
 }
@@ -53,12 +59,8 @@ impl Parser {
         self.tokens.peek()
     }
 
-    pub fn parse(&mut self) -> Result<Program, ParseError> {
-        Ok(self.parse_program()?)
-    }
-
     // <program> := <table> <statement>*
-    fn parse_program(&mut self) -> Result<Program, ParseError> {
+    fn parse(&mut self) -> Result<Program, ParseError> {
         let mut statements = Vec::new();
 
         // first statement must be table name (identifier)
@@ -74,23 +76,53 @@ impl Parser {
         while let Some(token) = self.peek_token() {
             match token.kind {
                 TokenKind::Dot => {
-                    /*
                     self.next_token();
-                    let statement = self.parse_statement();
-                    if let Some(statement) = statement {
-                        statements.push(statement);
-                    }
-                    */
-                    self.next_token();
+                    let statement = self.parse_statement()?;
+                    statements.push(statement);
                 }
                 TokenKind::Eof => {
                     break;
                 }
-                _ => break,
+                _ => return Err(ParseError::Eof),
             }
         }
 
+        println!("statements: {:?}", statements);
+
         Ok(Program { statements })
+    }
+
+    fn parse_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+        match self.peek_token() {
+            Some(token) => match token.kind {
+                TokenKind::Open => self.parse_open_statement(),
+                _ => Err(ParseError::InvalidMethod(String::from("SELECT"))),
+            },
+            None => Err(ParseError::InvalidMethod(String::from(""))),
+        }
+    }
+
+    fn parse_open_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+        let token = self.next_token().unwrap();
+
+        if !self.expect_peek(TokenKind::Lparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\'(\'"),
+                self.current_token.literal(),
+            ));
+        }
+
+        if !self.expect_peek(TokenKind::Rparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\')\'"),
+                self.current_token.literal(),
+            ));
+        }
+
+        println!("self.current_token: {:?}", self.current_token);
+        println!("self.peek_token:  {:?}", self.peek_token());
+
+        Ok(Box::new(OpenStatement { token }))
     }
 
     // <table> := <identifier>
@@ -122,7 +154,6 @@ impl Parser {
             self.next_token();
             true
         } else {
-            // TODO: parse error
             false
         }
     }
@@ -135,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_parse_talbe() {
-        let input = "Produc2__c.select(Id, Name)";
+        let input = "Produc2__c";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let program = parser.parse().unwrap();
@@ -145,5 +176,16 @@ mod tests {
             program.statements[0].token_literal(),
             "Produc2__c".to_string()
         );
+    }
+
+    #[test]
+    fn test_parse_open() {
+        let input = "Account.open()";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(program.statements[1].token_literal(), "open".to_string());
     }
 }

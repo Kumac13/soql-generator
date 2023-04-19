@@ -44,6 +44,21 @@ impl Statement for Table {
     fn statement_node(&self) {}
 }
 
+#[derive(Debug)]
+pub struct OpenStatement {
+    pub token: Token,
+}
+
+impl Node for OpenStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal().clone()
+    }
+}
+
+impl Statement for OpenStatement {
+    fn statement_node(&self) {}
+}
+
 // <program> := <table> <statement>*
 // <table> := <identifier>
 // <statement> := <select_statement> | <where_statement> | <orderby_statement> | <groupby_statement> | <limit_statement> | <open_statement>
