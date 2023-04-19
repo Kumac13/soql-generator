@@ -131,6 +131,8 @@ fn search_keywords(literal: &str) -> Token {
         "like" | "LIKE" => Token::new(TokenKind::Like, String::from(literal)),
         "asc" | "ASC" => Token::new(TokenKind::Asc, String::from(literal)),
         "desc" | "DESC" => Token::new(TokenKind::Desc, String::from(literal)),
+        "true" | "TRUE" => Token::new(TokenKind::True, String::from(literal)),
+        "false" | "FALSE" => Token::new(TokenKind::False, String::from(literal)),
         _ => Token::new(TokenKind::Identifire, String::from(literal)),
     }
 }
@@ -152,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_tokenize() {
-        let input = "Account.select(Id, Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10').orderby(Id, Name DESC).limit(10)";
+        let input = "Account.select(Id, Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10' AND IsPaid = TRUE).orderby(Id, Name DESC).limit(10)";
         let expected = vec![
             Token::new(TokenKind::Identifire, String::from("Account")),
             Token::new(TokenKind::Dot, String::from(".")),
@@ -182,6 +184,10 @@ mod tests {
             Token::new(TokenKind::Identifire, String::from("CreatedDated")),
             Token::new(TokenKind::GreaterEq, String::from(">=")),
             Token::new(TokenKind::StringObject, String::from("2022-11-10")),
+            Token::new(TokenKind::And, String::from("AND")),
+            Token::new(TokenKind::Identifire, String::from("IsPaid")),
+            Token::new(TokenKind::Eq, String::from("=")),
+            Token::new(TokenKind::True, String::from("TRUE")),
             Token::new(TokenKind::Rparen, String::from(")")),
             Token::new(TokenKind::Dot, String::from(".")),
             Token::new(TokenKind::Orderby, String::from("orderby")),
