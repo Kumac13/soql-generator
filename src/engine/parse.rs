@@ -45,14 +45,38 @@ impl Parser {
             panic!("parse error");
         }
 
+        // parse statements
+        while let Some(token) = self.peek_token() {
+            match token.kind {
+                TokenKind::Dot => {
+                    /*
+                    self.next_token();
+                    let statement = self.parse_statement();
+                    if let Some(statement) = statement {
+                        statements.push(statement);
+                    }
+                    */
+                    break;
+                }
+                TokenKind::Eof => {
+                    break;
+                }
+                _ => break,
+            }
+        }
+
         Program { statements }
     }
 
     // <table> := <identifier>
     fn parse_table(&mut self) -> Box<dyn Statement> {
         let table_name = self.current_token.literal();
-        self.next_token();
 
+        println!("self.peek(): {:?}", self.peek_token());
+        if !self.peek_token_is(TokenKind::Eof) && !self.peek_token_is(TokenKind::Dot) {
+            // TODO: parse error
+            panic!("parse error");
+        }
         Box::new(Table {
             token: self.current_token.clone(),
             table_name,
@@ -84,8 +108,8 @@ mod tests {
     use crate::engine::lexer::tokenize;
 
     #[test]
-    fn test_parse() {
-        let input = "Produc2__c";
+    fn test_parse_talbe() {
+        let input = "Produc2__c.select(Id, Name)";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let program = parser.parse();
