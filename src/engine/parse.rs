@@ -112,6 +112,7 @@ impl Parser {
         match self.peek_token() {
             Some(token) => match token.kind {
                 TokenKind::Select | TokenKind::Groupby => self.parse_select_groupby_statement(),
+                TokenKind::Orderby => self.parse_orderby_statement(),
                 TokenKind::Limit => self.parse_limit_statement(),
                 TokenKind::Open => self.parse_open_statement(),
                 _ => Err(ParseError::InvalidMethod(String::from("SELECT"))),
@@ -148,6 +149,29 @@ impl Parser {
         };
 
         Ok(statement)
+    }
+
+    // <orderby_statement> := 'orderby' '(' <orderby_option> (',' <orderby_option>)* ')'
+    fn parse_orderby_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+        let token = self.next_token().unwrap();
+
+        if !self.expect_peek(TokenKind::Lparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\'(\'"),
+                self.peek_token().unwrap().literal(),
+            ));
+        }
+
+        let options = self.parse_orderby_options()?;
+
+        if !self.expect_peek(TokenKind::Rparen) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("\')\'"),
+                self.peek_token().unwrap().literal(),
+            ));
+        }
+
+        Ok(Box::new(OrderByStatement { token, options }))
     }
 
     // <limit_statement> := 'limit' '(' <integer> ')'
@@ -194,28 +218,16 @@ impl Parser {
         Ok(Box::new(OpenStatement { token }))
     }
 
-    // <field> := <identifier> | <identifire> <dot> <identifier>
     fn parse_fileds(&mut self) -> Result<Vec<FieldLiteral>, ParseError> {
         let mut fields = Vec::new();
 
         self.next_token();
 
         while !self.peek_token_is(TokenKind::Rparen) {
-            let token = self.current_token.clone();
-            let mut name = self.current_token.literal();
-
-            if self.expect_peek(TokenKind::Dot) {
-                if !self.expect_peek(TokenKind::Identifire) {
-                    return Err(ParseError::UnexpectedToken(
-                        String::from("Identifier"),
-                        self.peek_token().unwrap().literal(),
-                    ));
-                }
-                name = format!("{}.{}", name, self.current_token.literal());
-            }
+            let field = self.parse_filed()?;
 
             if self.peek_token_is(TokenKind::Rparen) {
-                fields.push(FieldLiteral { token, name });
+                fields.push(field);
                 break;
             }
 
@@ -227,10 +239,68 @@ impl Parser {
             }
             self.next_token();
 
-            fields.push(FieldLiteral { token, name });
+            fields.push(field);
         }
 
         Ok(fields)
+    }
+
+    // <field> := <identifier> | <identifire> <dot> <identifier>
+    fn parse_filed(&mut self) -> Result<FieldLiteral, ParseError> {
+        let token = self.current_token.clone();
+        let mut name = self.current_token.literal();
+
+        if self.expect_peek(TokenKind::Dot) {
+            if !self.expect_peek(TokenKind::Identifire) {
+                return Err(ParseError::UnexpectedToken(
+                    String::from("Identifier"),
+                    self.peek_token().unwrap().literal(),
+                ));
+            }
+            name = format!("{}.{}", name, self.current_token.literal());
+        }
+
+        Ok(FieldLiteral { token, name })
+    }
+
+    // <orderby_option> := <field> | <field> <asc_or_desc>
+    fn parse_orderby_options(&mut self) -> Result<Vec<OrderByOptionLiteral>, ParseError> {
+        let mut options = Vec::new();
+
+        self.next_token();
+
+        while !self.peek_token_is(TokenKind::Rparen) {
+            let mut field = self.parse_filed()?;
+
+            if self.peek_token_is(TokenKind::Asc) {
+                self.next_token();
+            } else if self.peek_token_is(TokenKind::Desc) {
+                self.next_token();
+                field.name = format!("{} {}", field.name, self.current_token.literal());
+            }
+
+            let option = OrderByOptionLiteral {
+                token: field.token,
+                name: field.name,
+            };
+
+            if self.peek_token_is(TokenKind::Rparen) {
+                options.push(option);
+                break;
+            }
+
+            if !self.expect_peek(TokenKind::Comma) {
+                return Err(ParseError::UnexpectedToken(
+                    String::from("\',\'"),
+                    self.peek_token().unwrap().literal(),
+                ));
+            }
+
+            self.next_token();
+
+            options.push(option);
+        }
+        Ok(options)
     }
 
     fn parse_integer_literal(&mut self) -> Result<IntegerLiteral, ParseError> {
@@ -307,15 +377,18 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_open() {
-        let input = "Account.open()";
+    fn test_parse_orderby() {
+        let input = "Opportunity.orderby(Id, Name ASC, Account.Name DESC)";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let program = parser.parse().unwrap();
 
         assert_eq!(program.statements.len(), 2);
-        assert_eq!(program.statements[1].token_literal(), "open".to_string());
-        assert_eq!(program.statements[1].string(), "open".to_string());
+        assert_eq!(program.statements[1].token_literal(), "orderby".to_string());
+        assert_eq!(
+            program.statements[1].string(),
+            "orderby(Id, Name, Account.Name DESC)".to_string()
+        );
     }
 
     #[test]
@@ -328,5 +401,17 @@ mod tests {
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "limit".to_string());
         assert_eq!(program.statements[1].string(), "limit(10)".to_string());
+    }
+
+    #[test]
+    fn test_parse_open() {
+        let input = "Account.open()";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(program.statements[1].token_literal(), "open".to_string());
+        assert_eq!(program.statements[1].string(), "open".to_string());
     }
 }

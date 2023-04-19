@@ -107,6 +107,31 @@ impl Statement for GroupByStatement {
 }
 
 #[derive(Debug)]
+pub struct OrderByStatement {
+    pub token: Token,
+    pub options: Vec<OrderByOptionLiteral>,
+}
+
+impl Node for OrderByStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = self.token_literal();
+        let params: Vec<String> = self.options.iter().map(|f| f.string()).collect();
+        s += "(";
+        s += &params.join(", ");
+        s += ")";
+        s
+    }
+}
+
+impl Statement for OrderByStatement {
+    fn statement_node(&self) {}
+}
+
+#[derive(Debug)]
 pub struct LimitStatement {
     pub token: Token,
     pub limit: IntegerLiteral,
@@ -186,6 +211,26 @@ impl Node for FieldLiteral {
 }
 
 impl Expression for FieldLiteral {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct OrderByOptionLiteral {
+    pub token: Token,
+    pub name: String,
+}
+
+impl Node for OrderByOptionLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl Expression for OrderByOptionLiteral {
     fn expression_node(&self) {}
 }
 
