@@ -3,10 +3,6 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 pub fn tokenize(input: &str) -> Vec<Token> {
-    enum State {
-        Normal,
-        Orderby,
-    }
     let mut tokens = Vec::new();
     let mut input = input.chars().peekable();
 
