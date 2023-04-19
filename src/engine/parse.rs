@@ -43,10 +43,9 @@ pub struct Parser {
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         let mut iter = tokens.into_iter().peekable();
-        let current_token = iter.next().unwrap();
         Parser {
             tokens: iter,
-            current_token,
+            current_token: Token::new(TokenKind::Illegal, String::from("")),
         }
     }
 
@@ -63,14 +62,8 @@ impl Parser {
     fn parse(&mut self) -> Result<Program, ParseError> {
         let mut statements = Vec::new();
 
-        // first statement must be table name (identifier)
-        if self.current_token_is(TokenKind::Identifire) {
-            let table = self.parse_table()?;
-            statements.push(table);
-        } else {
-            // TODO: parse error
-            panic!("parse error");
-        }
+        // parse table
+        statements.push(self.parse_table()?);
 
         // parse statements
         while let Some(token) = self.peek_token() {
@@ -88,6 +81,30 @@ impl Parser {
         }
 
         Ok(Program { statements })
+    }
+
+    // <table> := <identifier>
+    fn parse_table(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+        self.next_token();
+
+        // first statement must be table name (identifier)
+        if !self.current_token_is(TokenKind::Identifire) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("Table"),
+                self.current_token.literal(),
+            ));
+        }
+
+        let token = self.current_token.clone();
+        let table_name = self.current_token.literal();
+
+        if !self.peek_token_is(TokenKind::Eof) && !self.peek_token_is(TokenKind::Dot) {
+            return Err(ParseError::UnexpectedToken(
+                String::from("EOF or \'.\'"),
+                self.current_token.literal(),
+            ));
+        }
+        Ok(Box::new(Table { token, table_name }))
     }
 
     // <statement> := <limit_statement> | <open_statement>
@@ -144,22 +161,6 @@ impl Parser {
         }
 
         Ok(Box::new(OpenStatement { token }))
-    }
-
-    // <table> := <identifier>
-    fn parse_table(&mut self) -> Result<Box<dyn Statement>, ParseError> {
-        let table_name = self.current_token.literal();
-
-        if !self.peek_token_is(TokenKind::Eof) && !self.peek_token_is(TokenKind::Dot) {
-            return Err(ParseError::UnexpectedToken(
-                String::from("EOF or \'.\'"),
-                self.current_token.literal(),
-            ));
-        }
-        Ok(Box::new(Table {
-            token: self.current_token.clone(),
-            table_name,
-        }))
     }
 
     fn parse_integer_literal(&mut self) -> Result<IntegerLiteral, ParseError> {
