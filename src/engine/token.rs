@@ -41,4 +41,16 @@ impl Token {
     pub fn new(kind: TokenKind, literal: String) -> Self {
         Self { kind, literal }
     }
+
+    pub fn is_method(&self) -> bool {
+        matches!(
+            &self.kind,
+            TokenKind::Select
+                | TokenKind::Where
+                | TokenKind::Orderby
+                | TokenKind::Groupby
+                | TokenKind::Limit
+                | TokenKind::Open
+        )
+    }
 }
