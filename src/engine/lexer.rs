@@ -65,7 +65,25 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     ));
                 } else if is_literal(c) {
                     let literal = consume_literal(&mut input, c);
-                    tokens.push(search_keywords(&literal));
+                    let token = search_keywords(&literal);
+                    if token.is_query_method() {
+                        match tokens.pop() {
+                            // the word before the query method must be a dot
+                            Some(token) => {
+                                if !token.is_dot() {
+                                    eprintln!("syntax error: the word before the query method must be a dot");
+                                    std::process::exit(1);
+                                }
+                            }
+                            _ => {
+                                eprintln!(
+                                    "syntax error: the word before the query method must be a dot"
+                                );
+                                std::process::exit(1);
+                            }
+                        }
+                    }
+                    tokens.push(token);
                 } else {
                     tokens.push(Token::new(TokenKind::Illegal, String::from(c)));
                 }
@@ -154,17 +172,19 @@ mod tests {
 
     #[test]
     fn test_tokenize() {
-        let input = "Account.select(Id, Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10' AND IsPaid = TRUE).orderby(Id, Name DESC).limit(10)";
+        let input = "Opportunity.select(Id, Name, Account.Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10' AND IsPaid = TRUE).orderby(Id, Name DESC).limit(10).open()";
         let expected = vec![
-            Token::new(TokenKind::Identifire, String::from("Account")),
-            Token::new(TokenKind::Dot, String::from(".")),
+            Token::new(TokenKind::Identifire, String::from("Opportunity")),
             Token::new(TokenKind::Select, String::from("select")),
             Token::new(TokenKind::Lparen, String::from("(")),
             Token::new(TokenKind::Identifire, String::from("Id")),
             Token::new(TokenKind::Comma, String::from(",")),
             Token::new(TokenKind::Identifire, String::from("Name")),
-            Token::new(TokenKind::Rparen, String::from(")")),
+            Token::new(TokenKind::Comma, String::from(",")),
+            Token::new(TokenKind::Identifire, String::from("Account")),
             Token::new(TokenKind::Dot, String::from(".")),
+            Token::new(TokenKind::Identifire, String::from("Name")),
+            Token::new(TokenKind::Rparen, String::from(")")),
             Token::new(TokenKind::Where, String::from("where")),
             Token::new(TokenKind::Lparen, String::from("(")),
             Token::new(TokenKind::Identifire, String::from("Id")),
@@ -189,7 +209,6 @@ mod tests {
             Token::new(TokenKind::Eq, String::from("=")),
             Token::new(TokenKind::True, String::from("TRUE")),
             Token::new(TokenKind::Rparen, String::from(")")),
-            Token::new(TokenKind::Dot, String::from(".")),
             Token::new(TokenKind::Orderby, String::from("orderby")),
             Token::new(TokenKind::Lparen, String::from("(")),
             Token::new(TokenKind::Identifire, String::from("Id")),
@@ -197,10 +216,12 @@ mod tests {
             Token::new(TokenKind::Identifire, String::from("Name")),
             Token::new(TokenKind::Desc, String::from("DESC")),
             Token::new(TokenKind::Rparen, String::from(")")),
-            Token::new(TokenKind::Dot, String::from(".")),
             Token::new(TokenKind::Limit, String::from("limit")),
             Token::new(TokenKind::Lparen, String::from("(")),
             Token::new(TokenKind::Integer, String::from("10")),
+            Token::new(TokenKind::Rparen, String::from(")")),
+            Token::new(TokenKind::Open, String::from("open")),
+            Token::new(TokenKind::Lparen, String::from("(")),
             Token::new(TokenKind::Rparen, String::from(")")),
             Token::new(TokenKind::Eof, String::from("")),
         ];

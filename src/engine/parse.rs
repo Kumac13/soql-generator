@@ -67,16 +67,15 @@ impl Parser {
 
         // parse statements
         while let Some(token) = self.peek_token() {
-            match token.kind {
-                TokenKind::Dot => {
-                    self.next_token();
-                    let statement = self.parse_statement()?;
-                    statements.push(statement);
-                }
-                TokenKind::Eof => {
-                    break;
-                }
-                _ => return Err(ParseError::Eof),
+            if token.is_query_method() {
+                statements.push(self.parse_statement()?);
+            } else if token.kind == TokenKind::Eof {
+                break;
+            } else {
+                return Err(ParseError::UnexpectedToken(
+                    String::from("query method"),
+                    token.literal(),
+                ));
             }
         }
 
@@ -98,9 +97,9 @@ impl Parser {
         let token = self.current_token.clone();
         let table_name = self.current_token.literal();
 
-        if !self.peek_token_is(TokenKind::Eof) && !self.peek_token_is(TokenKind::Dot) {
+        if !self.peek_token_is(TokenKind::Eof) && !self.peek_token_is_query() {
             return Err(ParseError::UnexpectedToken(
-                String::from("EOF or \'.\'"),
+                String::from("EOF or query method after SObject Name"),
                 self.current_token.literal(),
             ));
         }
@@ -267,6 +266,10 @@ impl Parser {
         self.peek_token().map_or(false, |token| token.kind == kind)
     }
 
+    fn peek_token_is_query(&mut self) -> bool {
+        self.peek_token()
+            .map_or(false, |token| token.is_query_method())
+    }
     fn expect_peek(&mut self, kind: TokenKind) -> Result<(), ParseError> {
         if self.peek_token_is(kind.clone()) {
             self.next_token();
