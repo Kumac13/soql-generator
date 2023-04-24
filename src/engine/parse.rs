@@ -89,7 +89,7 @@ impl Parser {
         // first statement must be table name (identifier)
         if !self.current_token_is(TokenKind::Identifire) {
             return Err(ParseError::UnexpectedToken(
-                String::from("Table"),
+                String::from("SObject Name"),
                 self.current_token.literal(),
             ));
         }
@@ -111,6 +111,7 @@ impl Parser {
         match self.peek_token() {
             Some(token) => match token.kind {
                 TokenKind::Select | TokenKind::Groupby => self.parse_select_groupby_statement(),
+                TokenKind::Where => self.parse_where_statement(),
                 TokenKind::Orderby => self.parse_orderby_statement(),
                 TokenKind::Limit => self.parse_limit_statement(),
                 TokenKind::Open => self.parse_open_statement(),
@@ -129,7 +130,7 @@ impl Parser {
 
         self.expect_peek(TokenKind::Lparen)?;
 
-        let fields = self.parse_fileds()?;
+        let fields = self.parse_fields()?;
 
         self.expect_peek(TokenKind::Rparen)?;
 
@@ -140,6 +141,18 @@ impl Parser {
         };
 
         Ok(statement)
+    }
+
+    fn parse_where_statement(&mut self) -> Result<Box<dyn Statement>, ParseError> {
+        let token = self.next_token().unwrap();
+
+        self.expect_peek(TokenKind::Lparen)?;
+
+        let expression = self.parse_where_expressions()?;
+
+        self.expect_peek(TokenKind::Rparen)?;
+
+        Ok(Box::new(WhereStatement { token, expression }))
     }
 
     // <orderby_statement> := 'orderby' '(' <orderby_option> (',' <orderby_option>)* ')'
@@ -178,13 +191,13 @@ impl Parser {
         Ok(Box::new(OpenStatement { token }))
     }
 
-    fn parse_fileds(&mut self) -> Result<Vec<FieldLiteral>, ParseError> {
+    fn parse_fields(&mut self) -> Result<Vec<FieldLiteral>, ParseError> {
         let mut fields = Vec::new();
 
         self.next_token();
 
         while !self.peek_token_is(TokenKind::Rparen) {
-            let field = self.parse_filed()?;
+            let field = self.parse_field()?;
 
             if self.peek_token_is(TokenKind::Rparen) {
                 fields.push(field);
@@ -202,7 +215,7 @@ impl Parser {
     }
 
     // <field> := <identifier> | <identifire> <dot> <identifier>
-    fn parse_filed(&mut self) -> Result<FieldLiteral, ParseError> {
+    fn parse_field(&mut self) -> Result<FieldLiteral, ParseError> {
         let token = self.current_token.clone();
         let mut name = self.current_token.literal();
 
@@ -224,7 +237,7 @@ impl Parser {
         self.next_token();
 
         while !self.peek_token_is(TokenKind::Rparen) {
-            let mut field = self.parse_filed()?;
+            let mut field = self.parse_field()?;
 
             if self.peek_token_is(TokenKind::Asc) {
                 self.next_token();
@@ -252,10 +265,118 @@ impl Parser {
         Ok(options)
     }
 
+    fn parse_where_expressions(&mut self) -> Result<Box<dyn Expression>, ParseError> {
+        let mut left_exp = match self.peek_token() {
+            Some(token) => match token.kind {
+                TokenKind::Identifire => self.parse_condition()?,
+                TokenKind::Lparen => self.parse_grouped_condition()?,
+                _ => {
+                    return Err(ParseError::UnexpectedToken(
+                        self.current_token.literal(),
+                        String::from("expected condition"),
+                    ))
+                }
+            },
+            None => {
+                return Err(ParseError::UnexpectedToken(
+                    self.current_token.literal(),
+                    String::from("expected condition"),
+                ))
+            }
+        };
+
+        while let Some(token) = self.peek_token() {
+            match token.kind {
+                TokenKind::And | TokenKind::Or => {
+                    left_exp = self.parse_infix_expression(left_exp)?;
+                }
+                TokenKind::Rparen | TokenKind::Eof => {
+                    break;
+                }
+                _ => {
+                    return Err(ParseError::UnexpectedToken(
+                        self.current_token.literal(),
+                        String::from("expected condition"),
+                    ))
+                }
+            }
+        }
+
+        Ok(left_exp)
+    }
+
+    fn parse_infix_expression(
+        &mut self,
+        left: Box<dyn Expression>,
+    ) -> Result<Box<dyn Expression>, ParseError> {
+        let infix_token = self.next_token().unwrap();
+        let right = self.parse_where_expressions()?;
+
+        Ok(Box::new(InfixExpression {
+            token: infix_token.clone(),
+            left,
+            operator: infix_token.literal(),
+            right,
+        }))
+    }
+
+    fn parse_condition(&mut self) -> Result<Box<dyn Expression>, ParseError> {
+        let token = self.next_token().unwrap();
+        let field = self.parse_field()?;
+        let operator = self.parse_operator_literal()?;
+        let value = self.parse_value()?;
+
+        Ok(Box::new(Condition {
+            token,
+            field,
+            operator,
+            value,
+        }))
+    }
+
+    fn parse_grouped_condition(&mut self) -> Result<Box<dyn Expression>, ParseError> {
+        self.next_token();
+
+        let exp = self.parse_where_expressions()?;
+
+        self.expect_peek(TokenKind::Rparen)?;
+
+        Ok(exp)
+    }
+
     fn parse_integer_literal(&mut self) -> Result<IntegerLiteral, ParseError> {
         let token = self.next_token().unwrap();
         let value = token.literal().parse::<i64>().unwrap();
         Ok(IntegerLiteral { token, value })
+    }
+
+    fn parse_operator_literal(&mut self) -> Result<OperatorLiteral, ParseError> {
+        if let Some(token) = self.peek_token() {
+            if token.is_operator() {
+                self.next_token();
+                let operator = OperatorLiteral {
+                    token: self.current_token.clone(),
+                    value: self.current_token.literal(),
+                };
+                Ok(operator)
+            } else {
+                return Err(ParseError::UnexpectedToken(
+                    String::from("Operator(AND, OR, =, >, >=, <, <=, LIKE)"),
+                    self.peek_token().unwrap().literal(),
+                ));
+            }
+        } else {
+            return Err(ParseError::UnexpectedToken(
+                String::from("Operator(AND, OR, =, >, >=, <, <=, LIKE)"),
+                self.peek_token().unwrap().literal(),
+            ));
+        }
+    }
+
+    fn parse_value(&mut self) -> Result<Value, ParseError> {
+        let token = self.next_token().unwrap();
+        let value = token.literal();
+        Ok(Value { token, value })
     }
 
     fn current_token_is(&mut self, kind: TokenKind) -> bool {
@@ -270,6 +391,7 @@ impl Parser {
         self.peek_token()
             .map_or(false, |token| token.is_query_method())
     }
+
     fn expect_peek(&mut self, kind: TokenKind) -> Result<(), ParseError> {
         if self.peek_token_is(kind.clone()) {
             self.next_token();
@@ -314,6 +436,22 @@ mod tests {
         assert_eq!(
             program.statements[1].string(),
             "select(Id, Name, Account.Name, Contract.LastName)".to_string()
+        );
+    }
+
+    #[test]
+    fn test_parse_where() {
+        let input =
+            "Opportunity.where(Id = '123' AND (Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(program.statements[1].token_literal(), "where".to_string());
+        assert_eq!(
+            program.statements[1].string(),
+            "where((Id = '123' AND ((Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')))".to_string()
         );
     }
 

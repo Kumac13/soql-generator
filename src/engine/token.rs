@@ -20,8 +20,6 @@ pub enum TokenKind {
     And,
     Or,
     Like,
-    Asc,
-    Desc,
     Eq,
     NotEq,
     Greater,
@@ -30,6 +28,9 @@ pub enum TokenKind {
     LessEq,
     True,
     False,
+    // Orderby Option
+    Asc,
+    Desc,
 }
 
 impl TokenKind {
@@ -80,5 +81,36 @@ impl Token {
 
     pub fn literal(&self) -> String {
         self.literal.clone()
+    }
+
+    pub fn is_query_method(&self) -> bool {
+        matches!(
+            self.kind,
+            TokenKind::Select
+                | TokenKind::Where
+                | TokenKind::Orderby
+                | TokenKind::Groupby
+                | TokenKind::Limit
+                | TokenKind::Open
+        )
+    }
+
+    pub fn is_operator(&self) -> bool {
+        matches!(
+            self.kind,
+            TokenKind::Or
+                | TokenKind::And
+                | TokenKind::Eq
+                | TokenKind::NotEq
+                | TokenKind::Greater
+                | TokenKind::GreaterEq
+                | TokenKind::Less
+                | TokenKind::LessEq
+                | TokenKind::Like
+        )
+    }
+
+    pub fn is_dot(&self) -> bool {
+        matches!(self.kind, TokenKind::Dot)
     }
 }

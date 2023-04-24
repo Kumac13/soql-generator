@@ -83,6 +83,30 @@ impl Statement for SelectStatement {
 }
 
 #[derive(Debug)]
+pub struct WhereStatement {
+    pub token: Token,
+    pub expression: Box<dyn Expression>,
+}
+
+impl Node for WhereStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = self.token_literal();
+        s += "(";
+        s += &self.expression.string();
+        s += ")";
+        s
+    }
+}
+
+impl Statement for WhereStatement {
+    fn statement_node(&self) {}
+}
+
+#[derive(Debug)]
 pub struct GroupByStatement {
     pub token: Token,
     pub fields: Vec<FieldLiteral>,
@@ -234,29 +258,137 @@ impl Expression for OrderByOptionLiteral {
     fn expression_node(&self) {}
 }
 
-// <program> := <table> <statement>*
-// <table> := <identifier>
-// <statement> := <select_statement> | <where_statement> | <orderby_statement> | <groupby_statement> | <limit_statement> | <open_statement>
-// <select_statement> := "." "select" "(" <field> ("," <field>)* ")"
-// <where_statement> := "." "where" "(" <where_expression> ")"
-// <orderby_statement> := "." "orderby" "(" <orderby_option> ("," <orderby_option>)* ")"
-// <orderby_option> := <field> | <field> <order>
-// <order> := "ASC" | "DESC"
-// <groupby_statement> := "." "groupby" "(" <field> ("," <field>)* ")"
-// <open_statement> := "." "open" "(" ")"
-// <limit_statement> := "." "limit" "(" <integer> ")"
-// <field> := <identifier> | <identifier> "." <identifier>
-// <where_expression> := <expression> | <expression> "AND" <expression> | <expression> "OR" <expression>
-// <expression> := <condition> | <condition> "AND" <condition> | <condition> "OR" <condition>
-// <condition> := <field> | <field> <equal> <string> | <field> <like> <string> | <field> <equal> <integer> | <field> <like> <string> | <field> <operator> <boolean>
-// <boolean> := "true" | "false"
-// <equal> := "=" | "!="
-// <like> := "LIKE"
-// <greater> := ">" | ">=" | "<" | "<="
-// <integer> := <digit>+
-// <string> := <character>+
-// <identifier> := <alpha> <alphanumeric>*
-// <alpha> := a|b|...|z|A|B|...|Z|_
-// <digit> := 0|1|...|9
-// <alphanumeric> := <alpha>|<digit>
-// <operator> := <greater>
+#[derive(Debug)]
+pub struct StringLiteral {
+    pub token: Token,
+    pub value: String,
+}
+
+impl Node for StringLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        self.value.clone()
+    }
+}
+
+impl Expression for StringLiteral {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct BooleanLiteral {
+    pub token: Token,
+    pub value: bool,
+}
+
+impl Node for BooleanLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        self.value.to_string()
+    }
+}
+
+impl Expression for BooleanLiteral {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct OperatorLiteral {
+    pub token: Token,
+    pub value: String,
+}
+
+impl Node for OperatorLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        self.value.clone()
+    }
+}
+
+impl Expression for OperatorLiteral {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct Value {
+    pub token: Token,
+    pub value: String,
+}
+
+impl Node for Value {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        "\'".to_string() + &self.value + "\'"
+    }
+}
+
+impl Expression for Value {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct InfixExpression {
+    pub token: Token,
+    pub left: Box<dyn Expression>,
+    pub operator: String,
+    pub right: Box<dyn Expression>,
+}
+
+impl Node for InfixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = "(".to_string() + &self.left.string();
+        s += " ";
+        s += &self.operator;
+        s += " ";
+        s += &self.right.string();
+        s += ")";
+        s
+    }
+}
+
+impl Expression for InfixExpression {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
+pub struct Condition {
+    pub token: Token,
+    pub field: FieldLiteral,
+    pub operator: OperatorLiteral,
+    pub value: Value,
+}
+
+impl Node for Condition {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = self.field.string();
+        s += " ";
+        s += &self.operator.string();
+        s += " ";
+        s += &self.value.string();
+        s
+    }
+}
+
+impl Expression for Condition {
+    fn expression_node(&self) {}
+}
