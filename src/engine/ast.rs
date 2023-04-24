@@ -344,6 +344,31 @@ impl Expression for Value {
 }
 
 #[derive(Debug)]
+pub struct PrefixExpression {
+    pub token: Token,
+    pub operator: String,
+    pub right: Box<dyn Expression>,
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal()
+    }
+
+    fn string(&self) -> String {
+        let mut s = "(".to_string();
+        s += &self.operator;
+        s += &self.right.string();
+        s += ")";
+        s
+    }
+}
+
+impl Expression for PrefixExpression {
+    fn expression_node(&self) {}
+}
+
+#[derive(Debug)]
 pub struct InfixExpression {
     pub token: Token,
     pub left: Box<dyn Expression>,
@@ -376,7 +401,7 @@ pub struct Condition {
     pub token: Token,
     pub field: FieldLiteral,
     pub operator: OperatorLiteral,
-    pub value: Value,
+    pub value: Box<dyn Expression>,
 }
 
 impl Node for Condition {

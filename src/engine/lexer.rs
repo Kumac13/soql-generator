@@ -14,6 +14,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         match c {
             '=' => tokens.push(Token::new(TokenKind::Eq, String::from("="))),
             // TODO: need to implement '+' and '-' for where condition
+            '+' => tokens.push(Token::new(TokenKind::Plus, String::from("+"))),
+            '-' => tokens.push(Token::new(TokenKind::Minus, String::from("-"))),
             '>' => {
                 if let Some(c) = input.peek() {
                     if *c == '=' {
@@ -173,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_tokenize() {
-        let input = "Opportunity.select(Id, Name, Account.Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10' AND IsPaid = TRUE).orderby(Id, Name DESC).limit(10).open()";
+        let input = "Opportunity.select(Id, Name, Account.Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10' AND IsPaid = TRUE OR Discount <= -1000).orderby(Id, Name DESC).limit(10).open()";
         let expected = vec![
             Token::new(TokenKind::Identifire, String::from("Opportunity")),
             Token::new(TokenKind::Select, String::from("select")),
@@ -209,6 +211,11 @@ mod tests {
             Token::new(TokenKind::Identifire, String::from("IsPaid")),
             Token::new(TokenKind::Eq, String::from("=")),
             Token::new(TokenKind::True, String::from("TRUE")),
+            Token::new(TokenKind::Or, String::from("OR")),
+            Token::new(TokenKind::Identifire, String::from("Discount")),
+            Token::new(TokenKind::LessEq, String::from("<=")),
+            Token::new(TokenKind::Minus, String::from("-")),
+            Token::new(TokenKind::Integer, String::from("1000")),
             Token::new(TokenKind::Rparen, String::from(")")),
             Token::new(TokenKind::Orderby, String::from("orderby")),
             Token::new(TokenKind::Lparen, String::from("(")),

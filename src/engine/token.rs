@@ -9,6 +9,8 @@ pub enum TokenKind {
     Integer,
     Identifire,
     StringObject,
+    Plus,
+    Minus,
     // Methods
     Select,
     Where,
@@ -45,6 +47,8 @@ impl TokenKind {
             TokenKind::Integer => "INTEGER".to_string(),
             TokenKind::Identifire => "IDENTIFIRE".to_string(),
             TokenKind::StringObject => "STRING".to_string(),
+            TokenKind::Plus => "+".to_string(),
+            TokenKind::Minus => "-".to_string(),
             TokenKind::Select => "SELECT".to_string(),
             TokenKind::Where => "WHERE".to_string(),
             TokenKind::Orderby => "ORDERBY".to_string(),

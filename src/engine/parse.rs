@@ -374,10 +374,40 @@ impl Parser {
         }
     }
 
-    fn parse_value(&mut self) -> Result<Value, ParseError> {
+    fn parse_value(&mut self) -> Result<Box<dyn Expression>, ParseError> {
+        match self.peek_token() {
+            Some(token) => match token.kind {
+                TokenKind::Plus | TokenKind::Minus => self.parse_prefix_expression(),
+                TokenKind::StringObject | TokenKind::Integer => Ok(Box::new(Value {
+                    token: self.next_token().unwrap(),
+                    value: self.current_token.literal(),
+                })),
+                _ => {
+                    return Err(ParseError::UnexpectedToken(
+                        String::from(""),
+                        self.peek_token().unwrap().literal(),
+                    ))
+                }
+            },
+            None => {
+                return Err(ParseError::UnexpectedToken(
+                    String::from(""),
+                    self.peek_token().unwrap().literal(),
+                ))
+            }
+        }
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Box<dyn Expression>, ParseError> {
         let token = self.next_token().unwrap();
-        let value = token.literal();
-        Ok(Value { token, value })
+        let operator = token.literal();
+        let right = self.parse_value()?;
+
+        Ok(Box::new(PrefixExpression {
+            token,
+            operator,
+            right,
+        }))
     }
 
     fn current_token_is(&mut self, kind: TokenKind) -> bool {
