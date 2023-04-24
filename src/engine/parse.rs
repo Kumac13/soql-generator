@@ -42,7 +42,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        let mut iter = tokens.into_iter().peekable();
+        let iter = tokens.into_iter().peekable();
         Parser {
             tokens: iter,
             current_token: Token::new(TokenKind::Illegal, String::from("")),
@@ -62,20 +62,17 @@ impl Parser {
     fn parse(&mut self) -> Result<Program, ParseError> {
         let mut statements = Vec::new();
 
-        // parse table
         statements.push(self.parse_table()?);
 
-        // parse statements
         while let Some(token) = self.peek_token() {
-            if token.is_query_method() {
-                statements.push(self.parse_statement()?);
-            } else if token.kind == TokenKind::Eof {
-                break;
-            } else {
-                return Err(ParseError::UnexpectedToken(
-                    String::from("query method"),
-                    token.literal(),
-                ));
+            match token.kind {
+                TokenKind::Eof => break,
+                _ if token.is_query_method() => statements.push(self.parse_statement()?),
+                _ => {
+                    return Err(ParseError::InvalidMethod(
+                        self.peek_token().unwrap().literal(),
+                    ))
+                }
             }
         }
 
@@ -94,12 +91,12 @@ impl Parser {
             ));
         }
 
-        let token = self.current_token.clone();
         let table_name = self.current_token.literal();
+        let token = self.current_token.clone();
 
-        if !self.peek_token_is(TokenKind::Eof) && !self.peek_token_is_query() {
+        if !self.peek_token_is_query() {
             return Err(ParseError::UnexpectedToken(
-                String::from("EOF or query method after SObject Name"),
+                String::from("query method after SObject Name"),
                 self.current_token.literal(),
             ));
         }
@@ -119,7 +116,7 @@ impl Parser {
                     self.peek_token().unwrap().literal(),
                 )),
             },
-            None => Err(ParseError::InvalidMethod(String::from(""))),
+            None => unreachable!(),
         }
     }
 
@@ -265,6 +262,7 @@ impl Parser {
         Ok(options)
     }
 
+    // <where_expression> := <condition> | <grouped_condition>
     fn parse_where_expressions(&mut self) -> Result<Box<dyn Expression>, ParseError> {
         let mut left_exp = match self.peek_token() {
             Some(token) => match token.kind {
@@ -305,6 +303,7 @@ impl Parser {
         Ok(left_exp)
     }
 
+    // <infix_expression> := <where_expression> <operator> <where_expression>
     fn parse_infix_expression(
         &mut self,
         left: Box<dyn Expression>,
@@ -320,6 +319,7 @@ impl Parser {
         }))
     }
 
+    // <condition> := <field> <operator> <value>
     fn parse_condition(&mut self) -> Result<Box<dyn Expression>, ParseError> {
         let token = self.next_token().unwrap();
         let field = self.parse_field()?;
@@ -334,6 +334,7 @@ impl Parser {
         }))
     }
 
+    // <grouped_condition> := '(' <where_expression>')'
     fn parse_grouped_condition(&mut self) -> Result<Box<dyn Expression>, ParseError> {
         self.next_token();
 
@@ -415,13 +416,7 @@ mod tests {
         let input = "Produc2__c";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
-        let program = parser.parse().unwrap();
-
-        assert_eq!(program.statements.len(), 1);
-        assert_eq!(
-            program.statements[0].token_literal(),
-            "Produc2__c".to_string()
-        );
+        assert!(parser.parse().is_err());
     }
 
     #[test]
