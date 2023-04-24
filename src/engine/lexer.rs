@@ -13,6 +13,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
         match c {
             '=' => tokens.push(Token::new(TokenKind::Eq, String::from("="))),
+            // TODO: need to implement '+' and '-' for where condition
             '>' => {
                 if let Some(c) = input.peek() {
                     if *c == '=' {
