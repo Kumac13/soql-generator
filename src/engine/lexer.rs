@@ -72,13 +72,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                             // the word before the query method must be a dot
                             Some(token) => {
                                 if !token.is_dot() {
-                                    eprintln!("syntax error: the word before the query method must be a dot");
+                                    eprintln!("Syntax error: the word before the query method must be a dot");
                                     std::process::exit(1);
                                 }
                             }
                             _ => {
                                 eprintln!(
-                                    "syntax error: the word before the query method must be a dot"
+                                    "Syntax error: the word before the query method must be a dot"
                                 );
                                 std::process::exit(1);
                             }

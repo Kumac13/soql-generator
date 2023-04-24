@@ -20,7 +20,7 @@ impl Display for ParseError {
             ParseError::UnexpectedToken(message, token_literal) => {
                 write!(
                     f,
-                    "Unexpected token: expected {}. got {}",
+                    "Unexpected token: expected {}. got \'{}\'",
                     message, token_literal
                 )
             }
@@ -270,15 +270,15 @@ impl Parser {
                 TokenKind::Lparen => self.parse_grouped_condition()?,
                 _ => {
                     return Err(ParseError::UnexpectedToken(
+                        String::from("where clause"),
                         self.current_token.literal(),
-                        String::from("expected condition"),
                     ))
                 }
             },
             None => {
                 return Err(ParseError::UnexpectedToken(
+                    String::from("where clause"),
                     self.current_token.literal(),
-                    String::from("expected condition"),
                 ))
             }
         };
@@ -293,8 +293,8 @@ impl Parser {
                 }
                 _ => {
                     return Err(ParseError::UnexpectedToken(
+                        String::from("where clause"),
                         self.current_token.literal(),
-                        String::from("expected condition"),
                     ))
                 }
             }
