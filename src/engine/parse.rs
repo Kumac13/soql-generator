@@ -467,16 +467,17 @@ mod tests {
     #[test]
     fn test_parse_where() {
         let input =
-            "Opportunity.where(Id = '123' AND (Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')";
+            "Opportunity.where(Id = 123 AND (Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let program = parser.parse().unwrap();
 
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "where".to_string());
+
         assert_eq!(
-            program.statements[1].string(),
-            "where((Id = '123' AND ((Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')))".to_string()
+            program.string(),
+            "Opportunity.where((Id = 123 AND ((Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')))".to_string()
         );
     }
 
@@ -490,8 +491,8 @@ mod tests {
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "groupby".to_string());
         assert_eq!(
-            program.statements[1].string(),
-            "groupby(Id, Name, Account.Name)".to_string()
+            program.string(),
+            "Opportunity.groupby(Id, Name, Account.Name)".to_string()
         );
     }
 
@@ -505,8 +506,8 @@ mod tests {
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "orderby".to_string());
         assert_eq!(
-            program.statements[1].string(),
-            "orderby(Id, Name, Account.Name DESC)".to_string()
+            program.string(),
+            "Opportunity.orderby(Id, Name, Account.Name DESC)".to_string()
         );
     }
 
@@ -519,7 +520,7 @@ mod tests {
 
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "limit".to_string());
-        assert_eq!(program.statements[1].string(), "limit(10)".to_string());
+        assert_eq!(program.string(), "Account.limit(10)".to_string());
     }
 
     #[test]
@@ -531,6 +532,7 @@ mod tests {
 
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "open".to_string());
-        assert_eq!(program.statements[1].string(), "open".to_string());
+        assert_eq!(program.string(), "Account.open".to_string());
     }
+
 }
