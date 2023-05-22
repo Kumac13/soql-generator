@@ -18,7 +18,5 @@ pub fn build_query(expr: &str) -> Result<(String, bool), DynError> {
     query.evaluate(program)?;
     let generated_code = query.generate();
 
-    println!("generated query: {}", generated_code);
-
     Ok((generated_code, query.open_browser))
 }
