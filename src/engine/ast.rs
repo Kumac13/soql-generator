@@ -1,9 +1,34 @@
 use crate::engine::token::{Token, TokenKind};
 use core::fmt::Debug;
+use std::any::Any;
 
-pub trait Node {
+pub enum NodeType {
+    Program,
+    Table,
+    SelectStatement,
+    WhereStatement,
+    GroupByStatement,
+    OrderByStatement,
+    LimitStatement,
+    OpenStatement,
+    CloseStatement,
+    FieldLiteral,
+    OrderByOptionLiteral,
+    IntegerLiteral,
+    StringLiteral,
+    BooleanLiteral,
+    NullLiteral,
+    Value,
+    PrefixExpression,
+    InfixExpression,
+    Condition,
+    OperatorLiteral,
+}
+
+pub trait Node: Any {
     fn token_literal(&self) -> String;
     fn string(&self) -> String;
+    fn node_type(&self) -> NodeType;
 }
 
 pub trait Statement: Node + Debug {
@@ -35,10 +60,19 @@ impl Node for Program {
 
     fn string(&self) -> String {
         if !self.statements.is_empty() {
-            self.statements[0].token_literal()
+            let literals = self
+                .statements
+                .iter()
+                .map(|s| s.string())
+                .collect::<Vec<String>>();
+            literals.join(".")
         } else {
             "".to_string()
         }
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Program
     }
 }
 
@@ -55,6 +89,10 @@ impl Node for Table {
 
     fn string(&self) -> String {
         self.table_name.clone()
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Table
     }
 }
 
@@ -76,10 +114,11 @@ impl Node for SelectStatement {
     fn string(&self) -> String {
         let mut s = self.token_literal();
         let params: Vec<String> = self.fields.iter().map(|f| f.string()).collect();
-        s += "(";
-        s += &params.join(", ");
-        s += ")";
-        s
+        params.join(", ")
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::SelectStatement
     }
 }
 
@@ -104,6 +143,10 @@ impl Node for WhereStatement {
         s += &self.expression.string();
         s += ")";
         s
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::WhereStatement
     }
 }
 
@@ -130,6 +173,10 @@ impl Node for GroupByStatement {
         s += ")";
         s
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::GroupByStatement
+    }
 }
 impl Statement for GroupByStatement {
     fn statement_node(&self) {}
@@ -149,10 +196,11 @@ impl Node for OrderByStatement {
     fn string(&self) -> String {
         let mut s = self.token_literal();
         let params: Vec<String> = self.options.iter().map(|f| f.string()).collect();
-        s += "(";
-        s += &params.join(", ");
-        s += ")";
-        s
+        params.join(", ")
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::OrderByStatement
     }
 }
 
@@ -172,11 +220,11 @@ impl Node for LimitStatement {
     }
 
     fn string(&self) -> String {
-        let mut s = self.token_literal();
-        s += "(";
-        s += &self.limit.string();
-        s += ")";
-        s
+        self.limit.string()
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::LimitStatement
     }
 }
 
@@ -196,6 +244,10 @@ impl Node for OpenStatement {
 
     fn string(&self) -> String {
         self.token_literal()
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::OpenStatement
     }
 }
 
@@ -217,6 +269,10 @@ impl Node for IntegerLiteral {
     fn string(&self) -> String {
         self.value.to_string()
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::IntegerLiteral
+    }
 }
 
 impl Expression for IntegerLiteral {
@@ -236,6 +292,10 @@ impl Node for FieldLiteral {
 
     fn string(&self) -> String {
         self.name.clone()
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::FieldLiteral
     }
 }
 
@@ -257,6 +317,10 @@ impl Node for OrderByOptionLiteral {
     fn string(&self) -> String {
         self.name.clone()
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::OrderByOptionLiteral
+    }
 }
 
 impl Expression for OrderByOptionLiteral {
@@ -276,6 +340,10 @@ impl Node for StringLiteral {
 
     fn string(&self) -> String {
         self.value.clone()
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::StringLiteral
     }
 }
 
@@ -297,6 +365,10 @@ impl Node for BooleanLiteral {
     fn string(&self) -> String {
         self.value.to_string()
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::BooleanLiteral
+    }
 }
 
 impl Expression for BooleanLiteral {
@@ -317,6 +389,10 @@ impl Node for OperatorLiteral {
     fn string(&self) -> String {
         self.value.clone()
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::OperatorLiteral
+    }
 }
 
 impl Expression for OperatorLiteral {
@@ -335,7 +411,14 @@ impl Node for Value {
     }
 
     fn string(&self) -> String {
-        "\'".to_string() + &self.value + "\'"
+        match self.token.kind {
+            TokenKind::Identifire | TokenKind::StringObject => format!("\'{}\'", self.value),
+            _ => self.value.clone(),
+        }
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Value
     }
 }
 
@@ -361,6 +444,10 @@ impl Node for PrefixExpression {
         s += &self.right.string();
         s += ")";
         s
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::PrefixExpression
     }
 }
 
@@ -390,6 +477,10 @@ impl Node for InfixExpression {
         s += ")";
         s
     }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::InfixExpression
+    }
 }
 
 impl Expression for InfixExpression {
@@ -416,6 +507,10 @@ impl Node for Condition {
         s += " ";
         s += &self.value.string();
         s
+    }
+
+    fn node_type(&self) -> NodeType {
+        NodeType::Condition
     }
 }
 

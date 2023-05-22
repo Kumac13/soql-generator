@@ -59,7 +59,7 @@ impl Parser {
     }
 
     // <program> := <table> <statement>*
-    fn parse(&mut self) -> Result<Program, ParseError> {
+    pub fn parse(&mut self) -> Result<Program, ParseError> {
         let mut statements = Vec::new();
 
         statements.push(self.parse_table()?);
@@ -97,7 +97,7 @@ impl Parser {
         if !self.peek_token_is_query() {
             return Err(ParseError::UnexpectedToken(
                 String::from("query method after SObject Name"),
-                self.current_token.literal(),
+                self.peek_token().unwrap().literal(),
             ));
         }
         Ok(Box::new(Table { token, table_name }))
@@ -460,7 +460,7 @@ mod tests {
         assert_eq!(program.statements[1].token_literal(), "select".to_string());
         assert_eq!(
             program.statements[1].string(),
-            "select(Id, Name, Account.Name, Contract.LastName)".to_string()
+            "Id, Name, Account.Name, Contract.LastName".to_string()
         );
     }
 
@@ -506,8 +506,8 @@ mod tests {
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "orderby".to_string());
         assert_eq!(
-            program.string(),
-            "Opportunity.orderby(Id, Name, Account.Name DESC)".to_string()
+            program.statements[1].string(),
+            "Id, Name, Account.Name DESC".to_string()
         );
     }
 
@@ -520,7 +520,7 @@ mod tests {
 
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "limit".to_string());
-        assert_eq!(program.string(), "Account.limit(10)".to_string());
+        assert_eq!(program.statements[1].string(), "10".to_string());
     }
 
     #[test]

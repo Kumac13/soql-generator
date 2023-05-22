@@ -1,3 +1,6 @@
+use crate::engine::ast::*;
+use crate::helper::DynError;
+
 #[derive(Default, Debug)]
 pub struct Query {
     pub select: Option<String>,
@@ -33,58 +36,102 @@ impl Query {
         }
         query
     }
+
+    pub fn evaluate(&mut self, prgram: Program) -> Result<(), DynError> {
+        for node in prgram.statements {
+            self.evalute_statement(node)?;
+        }
+        Ok(())
+    }
+
+    fn evalute_statement(&mut self, node: Box<dyn Statement>) -> Result<(), DynError> {
+        match node.node_type() {
+            NodeType::Table => {
+                self.from = node.string();
+            }
+            NodeType::SelectStatement => {
+                self.select = Some(node.string());
+            }
+            NodeType::OrderByStatement => {
+                self.orderby = Some(node.string());
+            }
+            NodeType::LimitStatement => {
+                self.limit = Some(node.string());
+            }
+            NodeType::OpenStatement => {
+                self.open_browser = true;
+            }
+            _ => {
+                return Err("invalid node type".into());
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::lexer::tokenize;
+    use crate::engine::parse::Parser;
 
     #[test]
-    fn test_generate_query_with_defaults() {
-        let query = Query::default();
-        assert_eq!(query.generate(), "SELECT Id FROM ");
-    }
+    fn test_evaluate_select() {
+        let input = "Opportunity.select(Id, Name, Account.Name, Contract.LastName)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
 
-    #[test]
-    fn test_generate_query_with_select() {
         let mut query = Query::default();
-        query.select = Some(String::from("Name, Age"));
-        assert_eq!(query.generate(), "SELECT Name, Age FROM ");
-    }
+        query.evaluate(program).unwrap();
 
-    #[test]
-    fn test_generate_query_with_from() {
-        let mut query = Query::default();
-        query.from = String::from("Account");
-        assert_eq!(query.generate(), "SELECT Id FROM Account");
-    }
-
-    #[test]
-    fn test_generate_query_with_where() {
-        let mut query = Query::default();
-        query.from = String::from("Account");
-        query.where_clause = Some(String::from("Age > 18"));
-
-        assert_eq!(query.generate(), "SELECT Id FROM Account WHERE Age > 18");
-    }
-
-    #[test]
-    fn test_generate_query_with_orderby() {
-        let mut query = Query::default();
-        query.from = String::from("Account");
-        query.orderby = Some(String::from("Name ASC"));
-        assert_eq!(query.generate(), "SELECT Id FROM Account ORDER BY Name ASC");
-    }
-
-    #[test]
-    fn test_generate_query_with_open_browser() {
-        let mut query = Query::default();
-        query.open_browser = true;
-        query.from = String::from("Account");
-        query.where_clause = Some(String::from("Name = 'Test'"));
         assert_eq!(
-            query.generate(),
-            "SELECT Id FROM Account WHERE Name = 'Test' LIMIT 1"
+            query.select.unwrap(),
+            "Id, Name, Account.Name, Contract.LastName".to_string()
         );
+    }
+
+    #[test]
+    fn test_evaluate_orderby() {
+        let input = "Account.orderby(Id, Name ASC, Account.Name DESC)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        let mut query = Query::default();
+        query.evaluate(program).unwrap();
+
+        assert_eq!(
+            query.orderby.unwrap(),
+            "Id, Name, Account.Name DESC".to_string()
+        );
+    }
+
+    #[test]
+    fn test_evaluate_limit() {
+        let input = "Account.limit(10)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        let mut query = Query::default();
+        query.evaluate(program).unwrap();
+
+        assert_eq!(query.limit.unwrap(), "10");
+    }
+
+    #[test]
+    fn test_evaluate_open() {
+        let input = "Account.open()";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        let mut query = Query::default();
+        query.evaluate(program).unwrap();
+
+        assert_eq!(query.from, "Account");
+        assert_eq!(query.open_browser, true);
     }
 }
