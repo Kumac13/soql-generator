@@ -7,6 +7,7 @@ pub struct Query {
     pub from: String,
     pub where_clause: Option<String>,
     pub orderby: Option<String>,
+    pub groupby: Option<String>,
     pub limit: Option<String>,
     pub open_browser: bool,
 }
@@ -28,6 +29,9 @@ impl Query {
             return query;
         }
 
+        if let Some(groupby) = &self.groupby {
+            query = format!("{} GROUP BY {}", query, groupby);
+        }
         if let Some(orderby) = &self.orderby {
             query = format!("{} ORDER BY {}", query, orderby);
         }
@@ -53,7 +57,7 @@ impl Query {
                 self.select = Some(node.string());
             }
             NodeType::GroupByStatement => {
-                self.select = Some(node.string());
+                self.groupby = Some(node.string());
             }
             NodeType::WhereStatement => {
                 self.where_clause = Some(node.string());
@@ -83,6 +87,20 @@ mod tests {
     use crate::engine::parse::Parser;
 
     #[test]
+    fn test_generate_query() {
+        let input = "Opportunity.select(Id, Account.Name).where(Account.Name like '%test%' or (Id = 1 and Status = 'completed')).orderby(Id, Account.Name DESC).groupby(Id, Account.Name).limit(10)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        let mut query = Query::default();
+        query.evaluate(program).unwrap();
+        let soql = query.generate();
+
+        assert_eq!("SELECT Id, Account.Name FROM Opportunity WHERE (Account.Name like '%test%' or (Id = 1 and Status = 'completed')) GROUP BY Id, Account.Name ORDER BY Id, Account.Name DESC LIMIT 10", soql);
+    }
+
+    #[test]
     fn test_evaluate_select() {
         let input = "Opportunity.select(Id, Name, Account.Name, Contract.LastName)";
         let tokens = tokenize(input);
@@ -109,7 +127,7 @@ mod tests {
         query.evaluate(program).unwrap();
 
         assert_eq!(
-            query.select.unwrap(),
+            query.groupby.unwrap(),
             "Id, Name, Account.Name, Contract.LastName".to_string()
         );
     }
