@@ -193,7 +193,7 @@ impl Parser {
 
         self.next_token();
 
-        while !self.peek_token_is(TokenKind::Rparen) {
+        while !self.current_token_is(TokenKind::Rparen) {
             let field = self.parse_field()?;
 
             if self.peek_token_is(TokenKind::Rparen) {
