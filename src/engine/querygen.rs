@@ -52,6 +52,12 @@ impl Query {
             NodeType::SelectStatement => {
                 self.select = Some(node.string());
             }
+            NodeType::GroupByStatement => {
+                self.select = Some(node.string());
+            }
+            NodeType::WhereStatement => {
+                self.where_clause = Some(node.string());
+            }
             NodeType::OrderByStatement => {
                 self.orderby = Some(node.string());
             }
@@ -89,6 +95,39 @@ mod tests {
         assert_eq!(
             query.select.unwrap(),
             "Id, Name, Account.Name, Contract.LastName".to_string()
+        );
+    }
+
+    #[test]
+    fn test_evaluate_groupby() {
+        let input = "Opportunity.groupby(Id, Name, Account.Name, Contract.LastName)";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        let mut query = Query::default();
+        query.evaluate(program).unwrap();
+
+        assert_eq!(
+            query.select.unwrap(),
+            "Id, Name, Account.Name, Contract.LastName".to_string()
+        );
+    }
+
+    #[test]
+    fn test_evaluate_where() {
+        let input = "Opportunity.where(Id = 123 AND (Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')";
+        let tokens = tokenize(input);
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse().unwrap();
+
+        let mut query = Query::default();
+        query.evaluate(program).unwrap();
+
+        assert_eq!(
+            query.where_clause.unwrap(),
+            "(Id = 123 AND ((Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed'))"
+                .to_string()
         );
     }
 

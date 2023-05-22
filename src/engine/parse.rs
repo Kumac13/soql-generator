@@ -476,8 +476,9 @@ mod tests {
         assert_eq!(program.statements[1].token_literal(), "where".to_string());
 
         assert_eq!(
-            program.string(),
-            "Opportunity.where((Id = 123 AND ((Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')))".to_string()
+            program.statements[1].string(),
+            "(Id = 123 AND ((Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed'))"
+                .to_string()
         );
     }
 
@@ -491,8 +492,8 @@ mod tests {
         assert_eq!(program.statements.len(), 2);
         assert_eq!(program.statements[1].token_literal(), "groupby".to_string());
         assert_eq!(
-            program.string(),
-            "Opportunity.groupby(Id, Name, Account.Name)".to_string()
+            program.statements[1].string(),
+            "Id, Name, Account.Name".to_string()
         );
     }
 

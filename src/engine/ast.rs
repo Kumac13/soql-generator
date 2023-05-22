@@ -138,11 +138,7 @@ impl Node for WhereStatement {
     }
 
     fn string(&self) -> String {
-        let mut s = self.token_literal();
-        s += "(";
-        s += &self.expression.string();
-        s += ")";
-        s
+        self.expression.string()
     }
 
     fn node_type(&self) -> NodeType {
@@ -168,10 +164,7 @@ impl Node for GroupByStatement {
     fn string(&self) -> String {
         let mut s = self.token_literal();
         let params: Vec<String> = self.fields.iter().map(|f| f.string()).collect();
-        s += "(";
-        s += &params.join(", ");
-        s += ")";
-        s
+        params.join(", ")
     }
 
     fn node_type(&self) -> NodeType {
