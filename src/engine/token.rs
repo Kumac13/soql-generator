@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
     Eof,
@@ -35,39 +37,40 @@ pub enum TokenKind {
     Desc,
 }
 
-impl TokenKind {
-    pub fn to_string(&self) -> String {
-        match &self {
-            TokenKind::Eof => "EOF".to_string(),
-            TokenKind::Illegal => "ILLEGAL".to_string(),
-            TokenKind::Comma => ",".to_string(),
-            TokenKind::Dot => ".".to_string(),
-            TokenKind::Lparen => "(".to_string(),
-            TokenKind::Rparen => ")".to_string(),
-            TokenKind::Integer => "INTEGER".to_string(),
-            TokenKind::Identifire => "IDENTIFIRE".to_string(),
-            TokenKind::StringObject => "STRING".to_string(),
-            TokenKind::Plus => "+".to_string(),
-            TokenKind::Minus => "-".to_string(),
-            TokenKind::Select => "SELECT".to_string(),
-            TokenKind::Where => "WHERE".to_string(),
-            TokenKind::Orderby => "ORDERBY".to_string(),
-            TokenKind::Groupby => "GROUPBY".to_string(),
-            TokenKind::Limit => "LIMIT".to_string(),
-            TokenKind::Open => "OPEN".to_string(),
-            TokenKind::And => "AND".to_string(),
-            TokenKind::Or => "OR".to_string(),
-            TokenKind::Like => "LIKE".to_string(),
-            TokenKind::Asc => "ASC".to_string(),
-            TokenKind::Desc => "DESC".to_string(),
-            TokenKind::Eq => "=".to_string(),
-            TokenKind::NotEq => "!=".to_string(),
-            TokenKind::Greater => ">".to_string(),
-            TokenKind::GreaterEq => ">=".to_string(),
-            TokenKind::Less => "<".to_string(),
-            TokenKind::LessEq => "<=".to_string(),
-            TokenKind::True => "TRUE".to_string(),
-            TokenKind::False => "FALSE".to_string(),
+#[warn(unreachable_patterns)]
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TokenKind::Eof => write!(f, "EOF"),
+            TokenKind::Illegal => write!(f, "ILLEGAL"),
+            TokenKind::Comma => write!(f, ","),
+            TokenKind::Dot => write!(f, "."),
+            TokenKind::Lparen => write!(f, "("),
+            TokenKind::Rparen => write!(f, ")"),
+            TokenKind::Integer => write!(f, "INTEGER"),
+            TokenKind::Identifire => write!(f, "IDENTIFIRE"),
+            TokenKind::StringObject => write!(f, "STRING"),
+            TokenKind::Plus => write!(f, "+"),
+            TokenKind::Minus => write!(f, "-"),
+            TokenKind::Select => write!(f, "SELECT"),
+            TokenKind::Where => write!(f, "WHERE"),
+            TokenKind::Orderby => write!(f, "ORDERBY"),
+            TokenKind::Groupby => write!(f, "GROUPBY"),
+            TokenKind::Limit => write!(f, "LIMIT"),
+            TokenKind::Open => write!(f, "OPEN"),
+            TokenKind::And => write!(f, "AND"),
+            TokenKind::Or => write!(f, "OR"),
+            TokenKind::Like => write!(f, "LIKE"),
+            TokenKind::Eq => write!(f, "="),
+            TokenKind::NotEq => write!(f, "!="),
+            TokenKind::Greater => write!(f, ">"),
+            TokenKind::GreaterEq => write!(f, ">="),
+            TokenKind::Less => write!(f, "<"),
+            TokenKind::LessEq => write!(f, "<="),
+            TokenKind::True => write!(f, "TRUE"),
+            TokenKind::False => write!(f, "FALSE"),
+            TokenKind::Asc => write!(f, "ASC"),
+            TokenKind::Desc => write!(f, "DESC"),
         }
     }
 }

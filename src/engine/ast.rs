@@ -11,13 +11,11 @@ pub enum NodeType {
     OrderByStatement,
     LimitStatement,
     OpenStatement,
-    CloseStatement,
     FieldLiteral,
     OrderByOptionLiteral,
     IntegerLiteral,
     StringLiteral,
     BooleanLiteral,
-    NullLiteral,
     Value,
     PrefixExpression,
     InfixExpression,
@@ -112,7 +110,6 @@ impl Node for SelectStatement {
     }
 
     fn string(&self) -> String {
-        let mut s = self.token_literal();
         let params: Vec<String> = self.fields.iter().map(|f| f.string()).collect();
         params.join(", ")
     }
@@ -162,7 +159,6 @@ impl Node for GroupByStatement {
     }
 
     fn string(&self) -> String {
-        let mut s = self.token_literal();
         let params: Vec<String> = self.fields.iter().map(|f| f.string()).collect();
         params.join(", ")
     }
@@ -187,7 +183,6 @@ impl Node for OrderByStatement {
     }
 
     fn string(&self) -> String {
-        let mut s = self.token_literal();
         let params: Vec<String> = self.options.iter().map(|f| f.string()).collect();
         params.join(", ")
     }

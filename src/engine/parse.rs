@@ -11,7 +11,6 @@ use std::{
 pub enum ParseError {
     UnexpectedToken(String, String),
     InvalidMethod(String),
-    Eof,
 }
 
 impl Display for ParseError {
@@ -27,7 +26,6 @@ impl Display for ParseError {
             ParseError::InvalidMethod(method) => {
                 write!(f, "Invalid method: {}", method)
             }
-            ParseError::Eof => write!(f, "Unexpected EOF"),
         }
     }
 }
@@ -535,5 +533,4 @@ mod tests {
         assert_eq!(program.statements[1].token_literal(), "open".to_string());
         assert_eq!(program.string(), "Account.open".to_string());
     }
-
 }
