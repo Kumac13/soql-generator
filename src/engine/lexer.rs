@@ -154,6 +154,7 @@ fn search_keywords(literal: &str) -> Token {
         "desc" | "DESC" => Token::new(TokenKind::Desc, String::from(literal)),
         "true" | "TRUE" => Token::new(TokenKind::True, String::from(literal)),
         "false" | "FALSE" => Token::new(TokenKind::False, String::from(literal)),
+        "null" | "NULL" => Token::new(TokenKind::Null, String::from(literal)),
         _ => Token::new(TokenKind::Identifire, String::from(literal)),
     }
 }
@@ -175,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_tokenize() {
-        let input = "Opportunity.select(Id, Name, Account.Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%') AND CreatedDated >= '2022-11-10' AND IsPaid = TRUE OR Discount <= -1000).orderby(Id, Name DESC).limit(10).open()";
+        let input = "Opportunity.select(Id, Name, Account.Name).where(Id = 1 AND ( Name LIKE '%hoge%' OR Name LIKE '%fuga%' OR Name != NULL) AND CreatedDated >= '2022-11-10' AND IsPaid = TRUE OR Discount <= -1000).orderby(Id, Name DESC).limit(10).open()";
         let expected = vec![
             Token::new(TokenKind::Identifire, String::from("Opportunity")),
             Token::new(TokenKind::Select, String::from("select")),
@@ -202,6 +203,10 @@ mod tests {
             Token::new(TokenKind::Identifire, String::from("Name")),
             Token::new(TokenKind::Like, String::from("LIKE")),
             Token::new(TokenKind::StringObject, String::from("%fuga%")),
+            Token::new(TokenKind::Or, String::from("OR")),
+            Token::new(TokenKind::Identifire, String::from("Name")),
+            Token::new(TokenKind::NotEq, String::from("!=")),
+            Token::new(TokenKind::Null, String::from("NULL")),
             Token::new(TokenKind::Rparen, String::from(")")),
             Token::new(TokenKind::And, String::from("AND")),
             Token::new(TokenKind::Identifire, String::from("CreatedDated")),

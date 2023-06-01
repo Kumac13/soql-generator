@@ -32,6 +32,7 @@ pub enum TokenKind {
     LessEq,
     True,
     False,
+    Null,
     // Orderby Option
     Asc,
     Desc,
@@ -69,6 +70,7 @@ impl fmt::Display for TokenKind {
             TokenKind::LessEq => write!(f, "<="),
             TokenKind::True => write!(f, "TRUE"),
             TokenKind::False => write!(f, "FALSE"),
+            TokenKind::Null => write!(f, "NULL"),
             TokenKind::Asc => write!(f, "ASC"),
             TokenKind::Desc => write!(f, "DESC"),
         }
