@@ -376,10 +376,12 @@ impl Parser {
         match self.peek_token() {
             Some(token) => match token.kind {
                 TokenKind::Plus | TokenKind::Minus => self.parse_prefix_expression(),
-                TokenKind::StringObject | TokenKind::Integer => Ok(Box::new(Value {
-                    token: self.next_token().unwrap(),
-                    value: self.current_token.literal(),
-                })),
+                TokenKind::StringObject | TokenKind::Integer | TokenKind::Null => {
+                    Ok(Box::new(Value {
+                        token: self.next_token().unwrap(),
+                        value: self.current_token.literal(),
+                    }))
+                }
                 _ => {
                     return Err(ParseError::UnexpectedToken(
                         String::from(""),
@@ -465,7 +467,7 @@ mod tests {
     #[test]
     fn test_parse_where() {
         let input =
-            "Opportunity.where(Id = 123 AND (Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed')";
+            "Opportunity.where(Id = 123 AND (Name = 'test' OR Account.Name LIKE '%test%' OR Name != NULL) AND Status = 'Closed')";
         let tokens = tokenize(input);
         let mut parser = Parser::new(tokens);
         let program = parser.parse().unwrap();
@@ -475,7 +477,7 @@ mod tests {
 
         assert_eq!(
             program.statements[1].string(),
-            "(Id = 123 AND ((Name = 'test' OR Account.Name LIKE '%test%') AND Status = 'Closed'))"
+            "(Id = 123 AND ((Name = 'test' OR (Account.Name LIKE '%test%' OR Name != NULL)) AND Status = 'Closed'))"
                 .to_string()
         );
     }
